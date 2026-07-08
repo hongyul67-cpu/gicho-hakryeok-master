@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>기초학력 마스터 - 국영수 진단</title>
+<title>기초학력 마스터 - 국영수 학습·진단</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
@@ -16,12 +16,23 @@
     margin:0; font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
     background:var(--bg); color:var(--text); line-height:1.5;
   }
-  .wrap{max-width:820px; margin:0 auto; padding:24px 16px 80px;}
+  .wrap{max-width:820px; margin:0 auto; padding:0 16px 80px;}
   header.top{
-    text-align:center; padding:32px 16px 20px;
+    text-align:center; padding:28px 16px 16px;
   }
   header.top h1{margin:0 0 6px; font-size:28px;}
   header.top p{margin:0; color:var(--sub); font-size:14px;}
+
+  /* 최상단 모드 네비게이션 */
+  #modeNav{
+    position:sticky; top:0; z-index:10; background:var(--bg); padding:10px 0 14px;
+    display:flex; gap:8px; max-width:820px; margin:0 auto; padding-left:16px; padding-right:16px;
+  }
+  #modeNav button{
+    flex:1; padding:14px; border-radius:12px; font-size:15px; background:#e9ecf3; color:var(--sub);
+    border:2px solid transparent;
+  }
+  #modeNav button.active{background:#fff; color:var(--text); border-color:#4c6ef5; box-shadow:0 2px 8px rgba(76,110,245,.18);}
 
   .card{background:var(--card); border-radius:16px; padding:24px; box-shadow:0 2px 12px rgba(0,0,0,.06); margin-bottom:20px;}
 
@@ -76,7 +87,7 @@
     width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:15px;
   }
 
-  #progressBar{position:sticky; top:0; z-index:5; background:var(--bg); padding:10px 0;}
+  #progressBar{position:sticky; top:56px; z-index:5; background:var(--bg); padding:10px 0;}
   #progressBar .bar{height:8px; background:#e3e6ec; border-radius:6px; overflow:hidden;}
   #progressBar .fill{height:100%; background:linear-gradient(90deg,#4c6ef5,#12b886,#f76707); width:0%; transition:.2s;}
   #progressBar .label{font-size:12px; color:var(--sub); margin-top:4px; text-align:right;}
@@ -113,147 +124,573 @@
   .btn-save{background:linear-gradient(135deg,#4c6ef5,#4263eb); color:#fff;}
   .btn-retry{background:#eef0f4; color:var(--text);}
 
+  /* 학습 화면 */
+  .study-tabs{display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;}
+  .study-tabs button{padding:10px 16px; background:#eef0f4; color:var(--sub); font-size:14px;}
+  .study-tabs button.active{color:#fff;}
+  .study-tabs button.active[data-s=kor]{background:var(--kor);}
+  .study-tabs button.active[data-s=eng]{background:var(--eng);}
+  .study-tabs button.active[data-s=math]{background:var(--math);}
+
+  .cat-chips{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;}
+  .cat-chips button{padding:8px 14px; background:#fff; border:1.5px solid var(--border); color:var(--sub); font-size:13px;}
+  .cat-chips button.active{border-color:#4c6ef5; color:#4c6ef5; background:#eef1ff;}
+
+  .flash-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px;}
+  .flash-card{
+    border:1.5px solid var(--border); border-radius:12px; padding:18px 16px; cursor:pointer; background:#fff;
+    min-height:88px; display:flex; flex-direction:column; justify-content:center; transition:.15s;
+  }
+  .flash-card:hover{border-color:#4c6ef5;}
+  .flash-card .front{font-weight:800; font-size:16px;}
+  .flash-card .back{font-size:13px; color:var(--sub); margin-top:8px; display:none;}
+  .flash-card.flipped{background:#f2f4ff; border-color:#4c6ef5;}
+  .flash-card.flipped .back{display:block;}
+  .flash-card .hint{font-size:11px; color:#adb5bd; margin-top:6px;}
+
+  .formula-card{border:1.5px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:12px; background:#fff;}
+  .formula-card h4{margin:0 0 8px; font-size:15px; color:var(--math);}
+  .formula-card p{margin:4px 0; font-size:14px;}
+  .formula-card .ex{font-size:13px; color:var(--sub); margin-top:6px;}
+
+  .study-cta{
+    display:block; width:100%; padding:16px; font-size:16px; margin-top:24px; color:#fff;
+    box-shadow:0 6px 16px rgba(0,0,0,.15);
+  }
+  .study-cta[data-s=kor]{background:linear-gradient(135deg,#4c6ef5,#3b5bdb);}
+  .study-cta[data-s=eng]{background:linear-gradient(135deg,#12b886,#099268);}
+  .study-cta[data-s=math]{background:linear-gradient(135deg,#f76707,#e8590c);}
+
   .hidden{display:none !important;}
   footer{text-align:center; color:var(--sub); font-size:12px; margin-top:30px;}
 </style>
 </head>
 <body>
+<div id="modeNav">
+  <button id="navStudy">📖 학습하기</button>
+  <button id="navTest" class="active">📝 테스트하기</button>
+</div>
 <div class="wrap">
   <header class="top">
     <h1>📚 기초학력 마스터</h1>
-    <p>중학교 수준 국어 · 영어 · 수학 기초 진단 학습 도구</p>
+    <p>중학교 수준 국어 · 영어 · 수학 기초 학습 · 진단 도구</p>
   </header>
 
-  <!-- 시작 화면 -->
-  <section id="screenStart" class="card">
-    <div class="field">
-      <label for="studentName">이름</label>
-      <input type="text" id="studentName" placeholder="이름을 입력하세요">
-    </div>
-    <div class="field">
-      <label>응시할 과목 선택 (복수 선택 가능)</label>
-      <div class="subject-grid">
-        <div class="subject-box on" data-s="kor" id="box-kor">국어<span class="cnt" id="cnt-kor"></span></div>
-        <div class="subject-box on" data-s="eng" id="box-eng">영어<span class="cnt" id="cnt-eng"></span></div>
-        <div class="subject-box on" data-s="math" id="box-math">수학<span class="cnt" id="cnt-math"></span></div>
+  <!-- ============ 학습 화면 ============ -->
+  <section id="screenStudy" class="hidden">
+    <div class="card">
+      <div class="study-tabs" id="studySubjectTabs">
+        <button class="active" data-s="kor">국어</button>
+        <button data-s="eng">영어</button>
+        <button data-s="math">수학</button>
       </div>
+      <div class="cat-chips" id="studyCatChips"></div>
+      <div id="studyBody"></div>
+      <button class="study-cta" id="studyCtaBtn" data-s="kor">이 과목으로 테스트 시작하기 →</button>
     </div>
-    <button class="btn-main" id="startBtn">학습 시작하기</button>
   </section>
 
-  <!-- 퀴즈 화면 -->
-  <section id="screenQuiz" class="hidden">
-    <div id="progressBar">
-      <div class="bar"><div class="fill" id="progressFill"></div></div>
-      <div class="label" id="progressLabel">0 / 0 문항 답변</div>
-    </div>
-    <div id="quizBody"></div>
-    <button class="btn-main" id="submitBtn">채점하기</button>
-  </section>
-
-  <!-- 결과 화면 -->
-  <section id="screenResult" class="hidden">
-    <div id="resultCapture">
-      <div class="result-head">
-        <h2 id="resultName"></h2>
-        <div class="meta" id="resultMeta"></div>
+  <!-- ============ 테스트 화면 ============ -->
+  <section id="screenTest">
+    <!-- 시작 화면 -->
+    <section id="screenStart" class="card">
+      <div class="field">
+        <label for="studentName">이름</label>
+        <input type="text" id="studentName" placeholder="이름을 입력하세요">
       </div>
-      <div class="score-grid" id="scoreGrid"></div>
-      <div id="reviewList"></div>
-    </div>
-    <div class="result-actions">
-      <button class="btn-save" id="saveImgBtn">🖼️ 채점 결과 이미지로 저장</button>
-      <button class="btn-retry" id="retryBtn">🔁 다시 풀기</button>
-    </div>
+      <div class="field">
+        <label>응시할 과목 선택 (복수 선택 가능) · 과목당 20문항이 매번 랜덤 출제됩니다</label>
+        <div class="subject-grid">
+          <div class="subject-box on" data-s="kor" id="box-kor">국어<span class="cnt" id="cnt-kor"></span></div>
+          <div class="subject-box on" data-s="eng" id="box-eng">영어<span class="cnt" id="cnt-eng"></span></div>
+          <div class="subject-box on" data-s="math" id="box-math">수학<span class="cnt" id="cnt-math"></span></div>
+        </div>
+      </div>
+      <button class="btn-main" id="startBtn">학습 시작하기</button>
+    </section>
+
+    <!-- 퀴즈 화면 -->
+    <section id="screenQuiz" class="hidden">
+      <div id="progressBar">
+        <div class="bar"><div class="fill" id="progressFill"></div></div>
+        <div class="label" id="progressLabel">0 / 0 문항 답변</div>
+      </div>
+      <div id="quizBody"></div>
+      <button class="btn-main" id="submitBtn">채점하기</button>
+    </section>
+
+    <!-- 결과 화면 -->
+    <section id="screenResult" class="hidden">
+      <div id="resultCapture">
+        <div class="result-head">
+          <h2 id="resultName"></h2>
+          <div class="meta" id="resultMeta"></div>
+        </div>
+        <div class="score-grid" id="scoreGrid"></div>
+        <div id="reviewList"></div>
+      </div>
+      <div class="result-actions">
+        <button class="btn-save" id="saveImgBtn">🖼️ 채점 결과 이미지로 저장</button>
+        <button class="btn-retry" id="retryBtn">🔁 다른 문제로 다시 풀기</button>
+      </div>
+    </section>
   </section>
 
   <footer>© 기초학력 마스터 · 학습용 자료입니다.</footer>
 </div>
 
 <script>
-/* ===================== 문제 데이터 ===================== */
-const QUESTIONS = {
-  kor: [
-    {type:'mc', q:"다음 중 맞춤법이 바른 표현은?", choices:["왠지 모르게","웬지 모르게","왠지 몰라두","웬지 몰라두"], answer:0},
-    {type:'mc', q:'"오늘은 안 (되/돼)." 빈칸에 알맞은 말은?', choices:["되","돼"], answer:1},
-    {type:'short', q:'"가늠하다"와 뜻이 비슷한 낱말을 쓰시오.', answers:["짐작하다","짐작"]},
-    {type:'mc', q:"다음 중 '반드시'가 바르게 쓰인 문장은?", choices:["반드시 약속을 지켜라.","반듯이 그는 약속을 지켰다.","그는 반드시 앉아 있었다.","글씨를 반드시 써라(똑바로)."], answer:0},
-    {type:'mc', q:"다음 중 띄어쓰기가 올바른 것은?", choices:["먹을 수 있다","먹을수있다","먹을수 있다","먹을 수있다"], answer:0},
-    {type:'short', q:'문장 "철수가 밥을 먹는다."에서 서술어를 쓰시오.', answers:["먹는다"]},
-    {type:'mc', q:"사자성어 '이심전심(以心傳心)'의 뜻으로 알맞은 것은?", choices:["마음과 마음이 서로 통함","몸이 몹시 아픔","말을 하지 않음","혼자서 결정함"], answer:0},
-    {type:'short', q:'"먹다"의 높임말(존댓말)을 한 가지 쓰시오.', answers:["드시다","잡수시다","드신다","잡수신다"]},
-    {type:'mc', q:'"빠르게"는 어떤 품사에 해당하는가?', choices:["부사","명사","동사","형용사"], answer:0},
-    {type:'short', q:'"크다"의 반의어(반대말)를 쓰시오.', answers:["작다"]},
-    {type:'mc', q:"'우물 안 개구리'라는 속담의 뜻으로 알맞은 것은?", choices:["시야나 생각이 좁은 사람","물을 아주 좋아하는 사람","겁이 매우 많은 사람","여행을 자주 다니는 사람"], answer:0},
-    {type:'mc', q:"다음 중 표준어로 바른 것은?", choices:["설거지","설겆이","설것이","설겄이"], answer:0},
-    {type:'short', q:'"읽다"의 명사형을 쓰시오. (예: 먹다→먹기)', answers:["읽기"]},
-    {type:'mc', q:'문장 "나는 배가 아파서 병원에 갔다."에서 밑줄 친 \'배\'가 뜻하는 것은?', choices:["신체의 배(복부)","과일 배","타는 배(선박)","곱하기(배수)"], answer:0},
-    {type:'short', q:'"기쁘다"의 반의어를 쓰시오.', answers:["슬프다"]},
-    {type:'mc', q:"다음 중 높임 표현이 알맞게 쓰인 문장은?", choices:["할머니께서 진지를 드신다.","할머니가 밥을 먹는다.","선생님이 온다.","친구가 오신다."], answer:0},
-    {type:'short', q:'"학교에 가다"에서 동사의 기본형을 쓰시오.', answers:["가다"]},
-    {type:'mc', q:"다음 중 문장 부호 사용이 올바른 것은?", choices:['"오늘 날씨 참 좋다."', "오늘 날씨 참 좋다,", "오늘 날씨 참 좋다;", "오늘 날씨 참 좋다:"], answer:0},
-    {type:'short', q:'"착하다"와 비슷한 뜻의 낱말을 한 가지 쓰시오.', answers:["선하다","순하다","다정하다","친절하다"]},
-    {type:'mc', q:"다음 중 사자성어 '온고지신(溫故知新)'의 뜻은?", choices:["옛것을 익히고 새것을 앎","화가 나서 다툼","서로 도와줌","모든 일이 잘됨"], answer:0}
-  ],
-  eng: [
-    {type:'mc', q:'Choose the correct word: "She ___ a student."', choices:["is","are","am","be"], answer:0},
-    {type:'mc', q:'Choose the correct word: "I ___ to school every day."', choices:["go","goes","going","went"], answer:0},
-    {type:'short', q:'Write the plural form of "child".', answers:["children"]},
-    {type:'mc', q:'What is the opposite of "big"?', choices:["small","tall","long","wide"], answer:0},
-    {type:'short', q:'Write the past tense of "go".', answers:["went"]},
-    {type:'mc', q:'Choose the correct word: "There ___ many books on the desk."', choices:["is","are","was","be"], answer:1},
-    {type:'short', q:'Write the English word for "사과" (fruit).', answers:["apple"]},
-    {type:'mc', q:'Which sentence is correct?', choices:["He doesn't like it.","He don't like it.","He not like it.","He no likes it."], answer:0},
-    {type:'short', q:'Write the comparative form of "good".', answers:["better"]},
-    {type:'mc', q:'Choose the correct word: "___ you like coffee?"', choices:["Do","Does","Is","Are"], answer:0},
-    {type:'short', q:'Write the -ing form of "run".', answers:["running"]},
-    {type:'mc', q:'Choose the correct preposition: "The book is ___ the table."', choices:["on","in","at","of"], answer:0},
-    {type:'short', q:'Write the opposite of "hot".', answers:["cold"]},
-    {type:'mc', q:'Choose the correct word: "My brother ___ two dogs."', choices:["have","has","having","had"], answer:1},
-    {type:'short', q:'Write the English word for "학교".', answers:["school"]},
-    {type:'mc', q:'Which sentence is correct?', choices:["I am not busy today.","I not am busy today.","I amn't busy today.","I not busy today."], answer:0},
-    {type:'short', q:'Write the third person singular form of "study" (he/she/it ___).', answers:["studies"]},
-    {type:'mc', q:'Choose the correct word: "This is ___ apple."', choices:["a","an","the","-"], answer:1},
-    {type:'short', q:'Write the opposite of "happy".', answers:["sad"]},
-    {type:'mc', q:'Choose the correct question word: "___ is your name?"', choices:["What","Who","Where","When"], answer:0}
-  ],
-  math: [
-    {type:'short', q:'3 + 5 × 2 = ?', answers:["13"]},
-    {type:'mc', q:"다음 중 소수(prime number)는 무엇인가?", choices:["9","11","15","21"], answer:1},
-    {type:'short', q:'12와 18의 최대공약수(GCD)는?', answers:["6"]},
-    {type:'short', q:'1/2 + 1/3 = ? (기약분수로 답하시오)', answers:["5/6"]},
-    {type:'mc', q:"다음 중 짝수는?", choices:["17","24","31","45"], answer:1},
-    {type:'short', q:'x + 5 = 12 일 때, x의 값은?', answers:["7"]},
-    {type:'short', q:'20의 15%는 얼마인가?', answers:["3"]},
-    {type:'mc', q:"삼각형의 세 내각의 합은?", choices:["90°","180°","270°","360°"], answer:1},
-    {type:'short', q:'2³ (2의 3제곱)의 값은?', answers:["8"]},
-    {type:'short', q:'-3 + 7 = ?', answers:["4"]},
-    {type:'mc', q:"다음 중 정사각형의 성질이 아닌 것은?", choices:["네 변의 길이가 모두 같다","네 각이 모두 90°이다","두 대각선의 길이가 다르다","마주보는 변이 평행하다"], answer:2},
-    {type:'short', q:'4/8을 기약분수로 나타내면?', answers:["1/2"]},
-    {type:'short', q:'3 × (4 + 2) = ?', answers:["18"]},
-    {type:'mc', q:"원의 둘레를 구하는 공식은? (r=반지름)", choices:["2πr","πr²","4r","πr"], answer:0},
-    {type:'short', q:'100을 5로 나눈 값은?', answers:["20"]},
-    {type:'short', q:'2x = 10일 때, x의 값은?', answers:["5"]},
-    {type:'mc', q:"다음 중 홀수는?", choices:["12","15","20","30"], answer:1},
-    {type:'short', q:'5² - 3² = ?', answers:["16"]},
-    {type:'short', q:'0.5를 기약분수로 나타내면?', answers:["1/2"]},
-    {type:'mc', q:"직각삼각형의 정의로 옳은 것은?", choices:["한 각이 90°인 삼각형","세 각이 모두 예각인 삼각형","세 변의 길이가 같은 삼각형","한 각이 둔각인 삼각형"], answer:0}
-  ]
-};
+/* ===================== 유틸 ===================== */
+function gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ [a,b]=[b,a%b]; } return a; }
+function lcm(a,b){ return Math.abs(a*b)/gcd(a,b); }
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function pick(arr,n){ return shuffle(arr).slice(0,n); }
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function mcItem(q, choices, answerIndex){ return {type:'mc', q, choices, answer:answerIndex}; }
+function shortItem(q, answers){ return {type:'short', q, answers}; }
+/* 보기 순서를 섞으면서 정답 인덱스를 함께 갱신 */
+function shuffleChoices(q, choices, correctValue){
+  const order = shuffle(choices.map((c,i)=>i));
+  const newChoices = order.map(i=>choices[i]);
+  const newAnswer = order.indexOf(choices.indexOf(correctValue));
+  return mcItem(q, newChoices, newAnswer);
+}
+
 const SUBJECT_NAME = {kor:"국어", eng:"영어", math:"수학"};
 
-/* ===================== 상태 ===================== */
+/* ===================== 국어 데이터뱅크 ===================== */
+const KOR_ANTONYMS = [
+  ["크다","작다"],["많다","적다"],["길다","짧다"],["넓다","좁다"],["높다","낮다"],
+  ["무겁다","가볍다"],["빠르다","느리다"],["덥다","춥다"],["뜨겁다","차갑다"],["밝다","어둡다"],
+  ["기쁘다","슬프다"],["좋다","나쁘다"],["쉽다","어렵다"],["강하다","약하다"],["두껍다","얇다"],
+  ["굵다","가늘다"],["깨끗하다","더럽다"],["부지런하다","게으르다"],["정직하다","거짓되다"],["친절하다","불친절하다"],
+  ["안전하다","위험하다"],["편리하다","불편하다"],["다르다","같다"],["시작하다","끝나다"],["앉다","서다"],
+  ["오다","가다"],["사다","팔다"],["열다","닫다"],["주다","받다"],["웃다","울다"],
+  ["이기다","지다"],["살다","죽다"],["얻다","잃다"],["채우다","비우다"],["늘다","줄다"],
+  ["오르다","내리다"],["켜다","끄다"],["붙다","떨어지다"],["가깝다","멀다"],["위","아래"],
+  ["안","밖"],["낮","밤"]
+];
+const KOR_SYNONYMS = [
+  ["가늠하다","짐작하다"],["착하다","선하다"],["예쁘다","아름답다"],["기쁘다","즐겁다"],["무섭다","두렵다"],
+  ["슬기롭다","지혜롭다"],["훌륭하다","뛰어나다"],["조용하다","고요하다"],["재빠르다","민첩하다"],["커다랗다","거대하다"],
+  ["아끼다","절약하다"],["소중하다","귀중하다"],["도와주다","돕다"],["이야기하다","말하다"],["살펴보다","관찰하다"],
+  ["생각하다","사고하다"],["튼튼하다","건강하다"],["힘들다","고되다"],["자세하다","상세하다"],["갑자기","별안간"],
+  ["언제나","항상"],["매우","몹시"],["벌써","이미"],["겨우","간신히"]
+];
+const KOR_POS = [
+  ["빠르게","부사"],["학교","명사"],["먹다","동사"],["예쁘다","형용사"],["조용히","부사"],
+  ["사랑","명사"],["달리다","동사"],["크다","형용사"],["천천히","부사"],["친구","명사"],
+  ["웃다","동사"],["넓다","형용사"],["갑자기","부사"],["나무","명사"],["자다","동사"],
+  ["좋다","형용사"],["매우","부사"],["하늘","명사"],["놀다","동사"],["춥다","형용사"],
+  ["열심히","부사"],["바다","명사"],["걷다","동사"],["무겁다","형용사"]
+];
+const KOR_HONORIFIC = [
+  ["먹다","드시다"],["자다","주무시다"],["있다","계시다"],["말하다","말씀하시다"],["아프다","편찮으시다"],
+  ["주다","드리다"],["묻다","여쭈다"],["이름","성함"],["나이","연세"],["밥","진지"],
+  ["집","댁"],["생일","생신"],["병","병환"],["말","말씀"],["술","약주"],["사람","분"]
+];
+const KOR_IDIOMS = [
+  ["이심전심","마음과 마음이 서로 통함"],["온고지신","옛것을 익히고 새것을 앎"],["유비무환","미리 준비하면 걱정이 없음"],
+  ["자업자득","자기가 저지른 일의 결과를 자기가 받음"],["일석이조","한 가지 일로 두 가지 이익을 얻음"],
+  ["백문불여일견","백 번 듣는 것보다 한 번 보는 것이 나음"],["고진감래","고생 끝에 즐거움이 옴"],
+  ["작심삼일","결심이 사흘을 가지 못함"],["새옹지마","인생의 좋고 나쁨은 예측하기 어려움"],["청출어람","제자가 스승보다 나음"],
+  ["대기만성","크게 될 사람은 늦게 성공함"],["역지사지","처지를 바꾸어 생각함"],["우이독경","아무리 말해도 알아듣지 못함"],
+  ["등하불명","가까이 있는 것을 도리어 알아보지 못함"],["결자해지","일을 저지른 사람이 그 일을 해결함"],
+  ["타산지석","남의 하찮은 언행도 자신을 갈고닦는 데 도움이 됨"],["사필귀정","모든 일은 결국 바른길로 돌아감"],
+  ["과유불급","지나침은 미치지 못함과 같음"],["십시일반","여러 사람이 조금씩 힘을 합하면 큰 도움이 됨"],
+  ["각주구검","융통성 없이 옛것에만 얽매임"],["감언이설","남의 비위를 맞추는 달콤한 말"],["파죽지세","거침없이 나아가는 기세"],
+  ["화룡점정","가장 중요한 부분을 마쳐 일을 완성함"],["금상첨화","좋은 일에 좋은 일이 더해짐"]
+];
+const KOR_SPELLING = [
+  ["왠지","웬지"],["오랜만","오랫만"],["설거지","설겆이"],["며칠","몇일"],["어이없다","어의없다"],
+  ["금세","금새"],["희한하다","희안하다"],["뒤처지다","뒤쳐지다"],["삼가다","삼가하다"],["되뇌다","되뇌이다"],
+  ["통틀어","통털어"],["곱빼기","곱배기"],["깍두기","깎두기"],["널찍하다","넓직하다"],["계속","게속"],
+  ["서슴지","서슴치"],["웬만하면","왠만하면"],["어떡해","어떻해"],["안성맞춤","안성마춤"],["낭떠러지","낭떨어지"]
+];
+
+function buildKorPool(){
+  const pool = [];
+  KOR_ANTONYMS.forEach(([a,b])=>{
+    pool.push(shortItem(`"${a}"의 반의어(반대말)를 쓰시오.`, [b]));
+    pool.push(shortItem(`"${b}"의 반의어(반대말)를 쓰시오.`, [a]));
+  });
+  KOR_SYNONYMS.forEach(([a,b])=>{
+    pool.push(shortItem(`"${a}"와(과) 뜻이 비슷한 낱말을 쓰시오.`, [b]));
+    pool.push(shortItem(`"${b}"와(과) 뜻이 비슷한 낱말을 쓰시오.`, [a]));
+  });
+  const posDistractors = ["부사","명사","동사","형용사"];
+  KOR_POS.forEach(([word,correct])=>{
+    const others = posDistractors.filter(p=>p!==correct);
+    const choices = shuffle([correct, ...pick(others,3)]);
+    pool.push(mcItem(`다음 낱말 "${word}"의 품사로 알맞은 것은?`, choices, choices.indexOf(correct)));
+  });
+  KOR_HONORIFIC.forEach(([word,honor])=>{
+    pool.push(shortItem(`"${word}"의 높임말을 쓰시오.`, [honor]));
+  });
+  const allIdiomMeanings = KOR_IDIOMS.map(x=>x[1]);
+  KOR_IDIOMS.forEach(([idiom,meaning])=>{
+    const distractors = pick(allIdiomMeanings.filter(m=>m!==meaning), 3);
+    const choices = shuffle([meaning, ...distractors]);
+    pool.push(mcItem(`사자성어 "${idiom}"의 뜻으로 알맞은 것은?`, choices, choices.indexOf(meaning)));
+  });
+  const allWrongSpellings = KOR_SPELLING.map(x=>x[1]);
+  KOR_SPELLING.forEach(([correct,wrong])=>{
+    const otherWrongs = pick(allWrongSpellings.filter(w=>w!==wrong), 2);
+    const choices = shuffle([correct, wrong, ...otherWrongs]);
+    pool.push(mcItem(`다음 중 맞춤법(표준어)이 올바른 것은?`, choices, choices.indexOf(correct)));
+  });
+  return pool;
+}
+
+/* ===================== 영어 데이터뱅크 ===================== */
+const ENG_VOCAB = [
+  ["사과","apple"],["바나나","banana"],["학교","school"],["선생님","teacher"],["학생","student"],
+  ["책","book"],["연필","pencil"],["의자","chair"],["책상","desk"],["창문","window"],
+  ["문","door"],["집","house"],["가족","family"],["친구","friend"],["강아지","dog"],
+  ["고양이","cat"],["물","water"],["우유","milk"],["빵","bread"],["밥","rice"],
+  ["아침","morning"],["저녁","evening"],["밤","night"],["하늘","sky"],["바다","sea"],
+  ["산","mountain"],["강","river"],["나무","tree"],["꽃","flower"],["태양","sun"],
+  ["달","moon"],["별","star"],["겨울","winter"],["여름","summer"],["봄","spring"],
+  ["가을","fall"],["병원","hospital"],["시장","market"],["도서관","library"],["공원","park"],
+  ["자동차","car"],["자전거","bicycle"],["비행기","airplane"],["기차","train"],["컴퓨터","computer"],
+  ["전화","phone"],["시계","clock"],["신발","shoes"],["모자","hat"],["우산","umbrella"]
+];
+const ENG_OPPOSITES = [
+  ["big","small"],["tall","short"],["fast","slow"],["hot","cold"],["happy","sad"],
+  ["easy","hard"],["strong","weak"],["heavy","light"],["clean","dirty"],["new","old"],
+  ["open","closed"],["full","empty"],["wet","dry"],["rich","poor"],["loud","quiet"],
+  ["early","late"],["near","far"],["high","low"],["thick","thin"],["wide","narrow"],
+  ["bright","dark"],["good","bad"],["right","wrong"],["same","different"],["true","false"],
+  ["safe","dangerous"],["cheap","expensive"],["sweet","sour"],["day","night"],["up","down"],
+  ["in","out"],["front","back"],["win","lose"],["buy","sell"]
+];
+const ENG_PLURALS = [
+  ["book","books"],["cat","cats"],["dog","dogs"],["box","boxes"],["bus","buses"],
+  ["city","cities"],["baby","babies"],["leaf","leaves"],["knife","knives"],["wife","wives"],
+  ["child","children"],["man","men"],["woman","women"],["foot","feet"],["tooth","teeth"],
+  ["mouse","mice"],["person","people"],["fish","fish"],["sheep","sheep"],["goose","geese"],
+  ["potato","potatoes"],["tomato","tomatoes"],["hero","heroes"],["photo","photos"],["piano","pianos"],
+  ["church","churches"],["dish","dishes"],["watch","watches"]
+];
+const ENG_PASTTENSE = [
+  ["play","played"],["walk","walked"],["watch","watched"],["clean","cleaned"],["help","helped"],
+  ["cook","cooked"],["wash","washed"],["jump","jumped"],["talk","talked"],["listen","listened"],
+  ["open","opened"],["close","closed"],["start","started"],["finish","finished"],["work","worked"],
+  ["live","lived"],["love","loved"],["like","liked"],["arrive","arrived"],["stop","stopped"],
+  ["go","went"],["eat","ate"],["run","ran"],["see","saw"],["come","came"],
+  ["take","took"],["give","gave"],["make","made"],["write","wrote"],["buy","bought"],
+  ["bring","brought"],["think","thought"],["know","knew"],["get","got"]
+];
+
+function buildEngPool(){
+  const pool = [];
+  ENG_VOCAB.forEach(([kr,en])=>{
+    pool.push(shortItem(`"${kr}"를 뜻하는 영어 단어를 쓰시오.`, [en]));
+  });
+  ENG_OPPOSITES.forEach(([a,b])=>{
+    pool.push(shortItem(`Write the opposite of "${a}".`, [b]));
+    pool.push(shortItem(`Write the opposite of "${b}".`, [a]));
+  });
+  ENG_PLURALS.forEach(([sg,pl])=>{
+    pool.push(shortItem(`Write the plural form of "${sg}".`, [pl]));
+  });
+  ENG_PASTTENSE.forEach(([base,past])=>{
+    pool.push(shortItem(`Write the past tense of "${base}".`, [past]));
+  });
+  // be동사 인칭 일치 (문법)
+  const pronouns = [["I","am"],["You","are"],["He","is"],["She","is"],["We","are"],["They","are"],["It","is"]];
+  const professions = ["a doctor","a teacher","a student","a nurse","an artist"];
+  pronouns.forEach(([pron,correct])=>{
+    professions.forEach(prof=>{
+      pool.push(shuffleChoices(`"${pron} ___ ${prof}."`, ["is","are","am"], correct));
+    });
+  });
+  // 전치사 / 의문사 / 관사 / there is-are 고정 문항
+  const fixed = [
+    shuffleChoices('"The cat is ___ the box."', ["in","on","at","to"], "in"),
+    shuffleChoices('"The picture is ___ the wall."', ["on","in","at","to"], "on"),
+    shuffleChoices('"We meet ___ Monday."', ["on","in","at","to"], "on"),
+    shuffleChoices('"She was born ___ 2012."', ["in","on","at","to"], "in"),
+    shuffleChoices('"The class starts ___ 9 o\'clock."', ["at","on","in","to"], "at"),
+    shuffleChoices('"___ is your name?"', ["What","Where","When","Who"], "What"),
+    shuffleChoices('"___ do you live?"', ["Where","What","When","Who"], "Where"),
+    shuffleChoices('"___ is your birthday?"', ["When","Where","What","Who"], "When"),
+    shuffleChoices('"___ is that man?"', ["Who","What","Where","When"], "Who"),
+    shuffleChoices('"___ book is this?"', ["Whose","Who","What","Where"], "Whose"),
+    shuffleChoices('"This is ___ umbrella."', ["an","a","the","-"], "an"),
+    shuffleChoices('"That is ___ car."', ["a","an","the","-"], "a"),
+    shuffleChoices('"There ___ a cat on the roof."', ["is","are","am","be"], "is"),
+    shuffleChoices('"There ___ two dogs in the yard."', ["are","is","am","be"], "are"),
+    shuffleChoices('"My brother ___ two dogs."', ["has","have","having","had"], "has"),
+    shuffleChoices('"He ___ like it."', ["doesn\'t","don\'t","isn\'t","not"], "doesn\'t")
+  ];
+  pool.push(...fixed);
+  return pool;
+}
+
+/* ===================== 수학 문제 생성 ===================== */
+function pairsGrid(aMin,aMax,bMin,bMax){
+  const arr=[];
+  for(let a=aMin;a<=aMax;a++) for(let b=bMin;b<=bMax;b++) arr.push([a,b]);
+  return arr;
+}
+const MATH_CONCEPTS = [
+  mcItem("다음 중 소수(prime number)는 무엇인가?", ["9","11","15","21"], 1),
+  mcItem("다음 중 짝수는?", ["17","24","31","45"], 1),
+  mcItem("다음 중 홀수는?", ["12","15","20","30"], 1),
+  mcItem("삼각형의 세 내각의 합은?", ["90°","180°","270°","360°"], 1),
+  mcItem("사각형의 네 내각의 합은?", ["180°","270°","360°","450°"], 2),
+  mcItem("다음 중 정사각형의 성질이 아닌 것은?", ["네 변의 길이가 모두 같다","네 각이 모두 90°이다","두 대각선의 길이가 다르다","마주보는 변이 평행하다"], 2),
+  mcItem("원의 둘레를 구하는 공식은? (r=반지름)", ["2πr","πr²","4r","πr"], 0),
+  mcItem("원의 넓이를 구하는 공식은? (r=반지름)", ["2πr","πr²","4r","πr"], 1),
+  mcItem("직각삼각형의 정의로 옳은 것은?", ["한 각이 90°인 삼각형","세 각이 모두 예각인 삼각형","세 변의 길이가 같은 삼각형","한 각이 둔각인 삼각형"], 0),
+  mcItem("다음 중 자연수가 아닌 것은?", ["1","5","0.5","10"], 2),
+  mcItem("1은 소수(prime number)인가?", ["소수이다","소수가 아니다"], 1),
+  mcItem("정삼각형의 세 변의 관계는?", ["길이가 모두 같다","한 변만 다르다","모두 다르다","두 변만 같다"], 0),
+  mcItem("평행사변형의 성질로 옳은 것은?", ["마주보는 두 변의 길이가 같다","네 각이 모두 같다","대각선이 서로 수직이다","네 변의 길이가 같다"], 0),
+  mcItem("다음 중 합성수는?", ["7","13","15","17"], 2),
+  mcItem("분수 3/4에서 분모는 무엇인가?", ["3","4","3/4","1"], 1),
+  mcItem("다음 중 가장 작은 수는?", ["-5","-1","0","3"], 0),
+  mcItem("이등변삼각형의 정의로 옳은 것은?", ["두 변의 길이가 같은 삼각형","세 변의 길이가 같은 삼각형","한 각이 직각인 삼각형","변의 길이가 모두 다른 삼각형"], 0),
+  mcItem("다음 중 짝수와 홀수의 합은 항상 무엇인가?", ["짝수","홀수","0","알 수 없다"], 1),
+  mcItem("정육면체의 면의 개수는?", ["4개","6개","8개","12개"], 1),
+  mcItem("직육면체의 꼭짓점의 개수는?", ["4개","6개","8개","12개"], 2)
+];
+
+function buildMathPool(){
+  const pool = [];
+  // 덧셈
+  pairsGrid(2,9,2,9).forEach(([a,b])=>{
+    pool.push(shortItem(`${a} + ${b} = ?`, [String(a+b)]));
+  });
+  // 뺄셈 (a>b)
+  for(let a=10;a<=39;a++){
+    const b = 2 + (a % 8);
+    if(b<a) pool.push(shortItem(`${a} - ${b} = ?`, [String(a-b)]));
+  }
+  // 곱셈 (구구단)
+  pairsGrid(2,9,2,9).forEach(([a,b])=>{
+    pool.push(shortItem(`${a} × ${b} = ?`, [String(a*b)]));
+  });
+  // 나눗셈 (나누어떨어짐)
+  pairsGrid(2,9,2,9).forEach(([b,k])=>{
+    const a=b*k;
+    pool.push(shortItem(`${a} ÷ ${b} = ?`, [String(k)]));
+  });
+  // 혼합계산 (사칙연산 순서)
+  for(let a=2;a<=6;a++) for(let b=2;b<=6;b++) for(let c=2;c<=4;c++){
+    pool.push(shortItem(`${a} + ${b} × ${c} = ?`, [String(a+b*c)]));
+  }
+  // 괄호 혼합계산
+  for(let a=2;a<=6;a++) for(let b=2;b<=6;b++) for(let c=2;c<=4;c++){
+    pool.push(shortItem(`(${a} + ${b}) × ${c} = ?`, [String((a+b)*c)]));
+  }
+  // 퍼센트
+  const percents=[10,20,25,50,75];
+  const bases=[20,40,60,80,100,120,160,200,240,300,400,500,600,800,1000,20,40,60,80,120];
+  bases.forEach((base,i)=>{
+    const p = percents[i%percents.length];
+    if((base*p)%100===0){
+      pool.push(shortItem(`${base}의 ${p}%는 얼마인가?`, [String(base*p/100)]));
+    }
+  });
+  // 분수 덧셈(같은 분모)
+  for(let d=4; d<=12; d++){
+    for(let a=1; a<d-1; a++){
+      const b = d-a-1>0 ? d-a-1 : 1;
+      if(a+b<d){
+        const num = a+b, g=gcd(num,d);
+        const rn=num/g, rd=d/g;
+        pool.push(shortItem(`${a}/${d} + ${b}/${d} = ? (기약분수로 답하시오)`, [rd===1? String(rn) : `${rn}/${rd}`]));
+      }
+    }
+  }
+  // 기약분수 만들기
+  pairsGrid(2,12,2,12).forEach(([n,k])=>{
+    const num=n*k, den=(n+1)*k;
+    const g=gcd(num,den);
+    pool.push(shortItem(`${num}/${den}을 기약분수로 나타내면?`, [`${num/g}/${den/g}`]));
+  });
+  // 일차방정식 x + a = b
+  for(let a=1;a<=25;a++){
+    const x = 2 + (a%20);
+    const b = a+x;
+    pool.push(shortItem(`x + ${a} = ${b} 일 때, x의 값은?`, [String(x)]));
+  }
+  // 일차방정식 a * x = b
+  pairsGrid(2,9,2,9).forEach(([a,x])=>{
+    const b=a*x;
+    pool.push(shortItem(`${a}x = ${b} 일 때, x의 값은?`, [String(x)]));
+  });
+  // 제곱, 세제곱
+  for(let n=2;n<=15;n++) pool.push(shortItem(`${n}² (${n}의 제곱)의 값은?`, [String(n*n)]));
+  for(let n=2;n<=10;n++) pool.push(shortItem(`${n}³ (${n}의 세제곱)의 값은?`, [String(n*n*n)]));
+  // 최대공약수
+  [[12,18],[8,12],[15,20],[24,36],[9,15],[14,21],[16,24],[18,27],[10,25],[20,30],[21,28],[6,9],[12,16],[25,35],[30,45]]
+    .forEach(([a,b])=>pool.push(shortItem(`${a}와 ${b}의 최대공약수는?`, [String(gcd(a,b))])));
+  // 최소공배수
+  [[4,6],[3,5],[6,8],[4,10],[5,6],[3,4],[6,9],[8,12],[9,12],[2,7],[5,10],[4,5],[6,10],[3,8],[10,15]]
+    .forEach(([a,b])=>pool.push(shortItem(`${a}와 ${b}의 최소공배수는?`, [String(lcm(a,b))])));
+  // 음수 덧셈/뺄셈
+  for(let i=1;i<=25;i++){
+    const a = -1*(1+(i%15));
+    const b = 2+(i%20);
+    pool.push(shortItem(`${a} + ${b} = ?`, [String(a+b)]));
+  }
+  // 원의 둘레 / 넓이 (파이=3.14)
+  for(let r=1;r<=15;r++){
+    pool.push(shortItem(`반지름이 ${r}cm인 원의 둘레는? (π=3.14로 계산, 소수 둘째 자리까지 쓰시오)`, [(2*3.14*r).toFixed(2)]));
+    pool.push(shortItem(`반지름이 ${r}cm인 원의 넓이는? (π=3.14로 계산, 소수 둘째 자리까지 쓰시오)`, [(3.14*r*r).toFixed(2)]));
+  }
+  pool.push(...MATH_CONCEPTS);
+  return pool;
+}
+
+/* ===================== 전체 문제 풀 ===================== */
+const POOLS = { kor: buildKorPool(), eng: buildEngPool(), math: buildMathPool() };
+const QUESTIONS_PER_SUBJECT = 20;
+
+/* 문항 수 표시 */
+Object.keys(SUBJECT_NAME).forEach(s=>{
+  const el = document.getElementById('cnt-'+s);
+  if(el) el.textContent = `${POOLS[s].length}문항 중 ${QUESTIONS_PER_SUBJECT}문항 랜덤 출제`;
+});
+
+/* ===================== 모드 네비게이션 ===================== */
+document.getElementById('navStudy').addEventListener('click', ()=>{
+  setMode('study');
+});
+document.getElementById('navTest').addEventListener('click', ()=>{
+  setMode('test');
+});
+function setMode(mode){
+  document.getElementById('screenStudy').classList.toggle('hidden', mode!=='study');
+  document.getElementById('screenTest').classList.toggle('hidden', mode!=='test');
+  document.getElementById('navStudy').classList.toggle('active', mode==='study');
+  document.getElementById('navTest').classList.toggle('active', mode==='test');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+/* ===================== 학습 화면 ===================== */
+const STUDY_CATEGORIES = {
+  kor: [
+    {key:'antonym', label:'반의어', data:KOR_ANTONYMS},
+    {key:'synonym', label:'유의어', data:KOR_SYNONYMS},
+    {key:'honorific', label:'높임말', data:KOR_HONORIFIC},
+    {key:'idiom', label:'사자성어', data:KOR_IDIOMS},
+    {key:'spelling', label:'맞춤법', data:KOR_SPELLING},
+    {key:'pos', label:'품사', data:KOR_POS}
+  ],
+  eng: [
+    {key:'vocab', label:'단어', data:ENG_VOCAB},
+    {key:'opposite', label:'반의어', data:ENG_OPPOSITES},
+    {key:'plural', label:'복수형', data:ENG_PLURALS},
+    {key:'past', label:'과거형', data:ENG_PASTTENSE}
+  ],
+  math: [
+    {key:'formula', label:'공식노트', data:null}
+  ]
+};
+const MATH_FORMULAS = [
+  {title:"사칙연산 순서", body:"괄호 안 → 곱셈·나눗셈 → 덧셈·뺄셈 순서로 계산한다.", ex:"예) 2 + 3 × 4 = 2 + 12 = 14"},
+  {title:"분수의 덧셈(같은 분모)", body:"분모는 그대로 두고 분자끼리 더한 뒤 기약분수로 나타낸다.", ex:"예) 1/6 + 2/6 = 3/6 = 1/2"},
+  {title:"최대공약수(GCD)", body:"두 수를 모두 나눌 수 있는 가장 큰 수.", ex:"예) 12와 18의 최대공약수는 6"},
+  {title:"최소공배수(LCM)", body:"두 수의 공통된 배수 중 가장 작은 수.", ex:"예) 4와 6의 최소공배수는 12"},
+  {title:"일차방정식 풀이", body:"양변에 같은 수를 더하거나 빼서 x만 남긴다.", ex:"예) x + 5 = 12 → x = 12 - 5 = 7"},
+  {title:"제곱과 세제곱", body:"같은 수를 2번, 3번 곱하는 것.", ex:"예) 4² = 4×4 = 16, 2³ = 2×2×2 = 8"},
+  {title:"원의 둘레", body:"원의 둘레 = 2 × π × 반지름 (π ≈ 3.14)", ex:"예) 반지름 5cm → 2×3.14×5 = 31.4cm"},
+  {title:"원의 넓이", body:"원의 넓이 = π × 반지름²  (π ≈ 3.14)", ex:"예) 반지름 5cm → 3.14×5×5 = 78.5cm²"},
+  {title:"삼각형의 내각의 합", body:"삼각형의 세 내각의 합은 항상 180°이다.", ex:"예) 두 각이 60°, 70°이면 나머지 한 각은 50°"},
+  {title:"사각형의 내각의 합", body:"사각형의 네 내각의 합은 항상 360°이다.", ex:"예) 세 각이 90°,90°,90°이면 나머지 한 각은 90°"},
+  {title:"소수와 합성수", body:"소수는 1과 자기 자신만을 약수로 갖는 수(1 제외), 합성수는 그 외의 수.", ex:"예) 2,3,5,7,11은 소수 / 4,6,8,9는 합성수"},
+  {title:"백분율(퍼센트)", body:"전체를 100으로 볼 때의 비율. N의 P% = N × P ÷ 100", ex:"예) 20의 25% = 20×25÷100 = 5"}
+];
+
+let studySubject = 'kor';
+let studyCategory = null;
+
+document.querySelectorAll('#studySubjectTabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    studySubject = btn.dataset.s;
+    document.querySelectorAll('#studySubjectTabs button').forEach(b=>b.classList.toggle('active', b===btn));
+    studyCategory = STUDY_CATEGORIES[studySubject][0].key;
+    renderStudyChips();
+    renderStudyBody();
+    document.getElementById('studyCtaBtn').dataset.s = studySubject;
+  });
+});
+
+function renderStudyChips(){
+  const wrap = document.getElementById('studyCatChips');
+  wrap.innerHTML = '';
+  STUDY_CATEGORIES[studySubject].forEach(cat=>{
+    const b = document.createElement('button');
+    b.textContent = cat.label;
+    b.className = cat.key===studyCategory ? 'active' : '';
+    b.addEventListener('click', ()=>{
+      studyCategory = cat.key;
+      renderStudyChips();
+      renderStudyBody();
+    });
+    wrap.appendChild(b);
+  });
+}
+
+function renderStudyBody(){
+  const body = document.getElementById('studyBody');
+  body.innerHTML = '';
+
+  if(studySubject === 'math'){
+    MATH_FORMULAS.forEach(f=>{
+      const card = document.createElement('div');
+      card.className = 'formula-card';
+      card.innerHTML = `<h4>${escapeHtml(f.title)}</h4><p>${escapeHtml(f.body)}</p><div class="ex">${escapeHtml(f.ex)}</div>`;
+      body.appendChild(card);
+    });
+    return;
+  }
+
+  const cat = STUDY_CATEGORIES[studySubject].find(c=>c.key===studyCategory);
+  const grid = document.createElement('div');
+  grid.className = 'flash-grid';
+  cat.data.forEach(([front,back])=>{
+    const card = document.createElement('div');
+    card.className = 'flash-card';
+    card.innerHTML = `<div class="front">${escapeHtml(front)}</div><div class="back">${escapeHtml(back)}</div><div class="hint">탭하여 뜻 보기</div>`;
+    card.addEventListener('click', ()=> card.classList.toggle('flipped'));
+    grid.appendChild(card);
+  });
+  body.appendChild(grid);
+}
+
+document.getElementById('studyCtaBtn').addEventListener('click', ()=>{
+  document.querySelectorAll('.subject-box').forEach(box=>{
+    const on = box.dataset.s === studySubject;
+    box.classList.toggle('on', on);
+    if(on) selectedSubjects = new Set([studySubject]);
+  });
+  setMode('test');
+  show('screenStart');
+  document.getElementById('studentName').focus();
+});
+
+studyCategory = STUDY_CATEGORIES.kor[0].key;
+renderStudyChips();
+renderStudyBody();
+
+/* ===================== 테스트 상태 ===================== */
 let selectedSubjects = new Set(["kor","eng","math"]);
 let activeQuestions = []; // {subject, index, data}
 let userAnswers = {}; // key "subject-index" -> value
 
-/* 문항 수 표시 */
-Object.keys(SUBJECT_NAME).forEach(s=>{
-  document.getElementById('cnt-'+s).textContent = QUESTIONS[s].length + '문항';
-});
-
 /* 과목 선택 토글 */
-document.querySelectorAll('.subject-box').forEach(box=>{
+document.querySelectorAll('#screenStart .subject-box').forEach(box=>{
   box.addEventListener('click', ()=>{
     const s = box.dataset.s;
     if(selectedSubjects.has(s)){
@@ -284,13 +721,15 @@ function buildQuiz(){
   body.innerHTML = '';
 
   order.forEach(subject=>{
+    const drawn = pick(POOLS[subject], Math.min(QUESTIONS_PER_SUBJECT, POOLS[subject].length));
+
     const title = document.createElement('div');
     title.className = 'section-title';
     title.dataset.s = subject;
-    title.innerHTML = `<span class="dot"></span>${SUBJECT_NAME[subject]} (${QUESTIONS[subject].length}문항)`;
+    title.innerHTML = `<span class="dot"></span>${SUBJECT_NAME[subject]} (${drawn.length}문항)`;
     body.appendChild(title);
 
-    QUESTIONS[subject].forEach((q, idx)=>{
+    drawn.forEach((q, idx)=>{
       activeQuestions.push({subject, index:idx, data:q});
       const key = subject+'-'+idx;
       const card = document.createElement('div');
@@ -473,19 +912,16 @@ document.getElementById('saveImgBtn').addEventListener('click', async ()=>{
 
 /* ===================== 다시 풀기 ===================== */
 document.getElementById('retryBtn').addEventListener('click', ()=>{
-  if(!confirm('처음부터 다시 시작할까요? 현재 답안은 초기화됩니다.')) return;
+  if(!confirm('새로운 문제로 다시 시작할까요? 현재 답안은 초기화됩니다.')) return;
   show('screenStart');
   window.scrollTo({top:0});
 });
 
-/* ===================== 유틸 ===================== */
+/* ===================== 유틸: 화면 전환 ===================== */
 function show(id){
   ['screenStart','screenQuiz','screenResult'].forEach(s=>{
     document.getElementById(s).classList.toggle('hidden', s !== id);
   });
-}
-function escapeHtml(str){
-  return String(str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 </script>
 </body>

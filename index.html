@@ -52,6 +52,13 @@
   .subject-box[data-s=math].on{border-color:var(--math); background:#fff2e8; box-shadow:0 0 0 2px var(--math) inset;}
   .subject-box .cnt{display:block; font-weight:400; font-size:12px; color:var(--sub); margin-top:4px;}
 
+  .level-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+  .level-box{
+    border:2px solid var(--border); border-radius:12px; padding:12px; text-align:center; cursor:pointer;
+    transition:.15s; user-select:none; font-weight:700; font-size:14px; color:var(--sub);
+  }
+  .level-box.on{border-color:#7048e8; background:#f2ecff; color:#5f3dc4; box-shadow:0 0 0 2px #7048e8 inset;}
+
   button{
     font-family:inherit; cursor:pointer; border:none; border-radius:10px; font-weight:700;
   }
@@ -173,12 +180,20 @@
 <div class="wrap">
   <header class="top">
     <h1>📚 기초학력 마스터</h1>
-    <p>중학교 수준 국어 · 영어 · 수학 기초 학습 · 진단 도구</p>
+    <p>중학교 · 고1 수준 국어 · 영어 · 수학 학습 · 진단 도구</p>
   </header>
 
   <!-- ============ 학습 화면 ============ -->
   <section id="screenStudy" class="hidden">
     <div class="card">
+      <div class="field">
+        <label>학습 수준 선택</label>
+        <div class="level-grid" id="studyLevelBoxes">
+          <div class="level-box on" data-l="ms">중학교</div>
+          <div class="level-box" data-l="hs1">고1</div>
+          <div class="level-box" data-l="all">전체</div>
+        </div>
+      </div>
       <div class="study-tabs" id="studySubjectTabs">
         <button class="active" data-s="kor">국어</button>
         <button data-s="eng">영어</button>
@@ -197,6 +212,14 @@
       <div class="field">
         <label for="studentName">이름</label>
         <input type="text" id="studentName" placeholder="이름을 입력하세요">
+      </div>
+      <div class="field">
+        <label>난이도 수준 선택</label>
+        <div class="level-grid" id="testLevelBoxes">
+          <div class="level-box on" data-l="ms">중학교</div>
+          <div class="level-box" data-l="hs1">고1</div>
+          <div class="level-box" data-l="all">전체</div>
+        </div>
       </div>
       <div class="field">
         <label>응시할 과목 선택 (복수 선택 가능) · 과목당 20문항이 매번 랜덤 출제됩니다</label>
@@ -243,6 +266,7 @@
 /* ===================== 유틸 ===================== */
 function gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ [a,b]=[b,a%b]; } return a; }
 function lcm(a,b){ return Math.abs(a*b)/gcd(a,b); }
+function factorial(n){ let r=1; for(let i=2;i<=n;i++) r*=i; return r; }
 function shuffle(arr){
   const a = arr.slice();
   for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
@@ -261,10 +285,19 @@ function shuffleChoices(q, choices, correctValue){
   const newAnswer = order.indexOf(choices.indexOf(correctValue));
   return mcItem(q, newChoices, newAnswer);
 }
+function tagLevel(arr, level){ arr.forEach(x=>x.level=level); return arr; }
+/* 일차식 ax+b 를 보기 좋은 문자열로 */
+function polyStr(a,b){
+  let s;
+  if(a===1) s='x'; else if(a===-1) s='-x'; else s=a+'x';
+  if(b>0) s += '+'+b; else if(b<0) s += String(b);
+  return s;
+}
 
 const SUBJECT_NAME = {kor:"국어", eng:"영어", math:"수학"};
+const LEVEL_NAME = {ms:"중학교", hs1:"고1", all:"전체"};
 
-/* ===================== 국어 데이터뱅크 ===================== */
+/* ===================== 국어 데이터뱅크 (중학교) ===================== */
 const KOR_ANTONYMS = [
   ["크다","작다"],["많다","적다"],["길다","짧다"],["넓다","좁다"],["높다","낮다"],
   ["무겁다","가볍다"],["빠르다","느리다"],["덥다","춥다"],["뜨겁다","차갑다"],["밝다","어둡다"],
@@ -348,7 +381,103 @@ function buildKorPool(){
   return pool;
 }
 
-/* ===================== 영어 데이터뱅크 ===================== */
+/* ===================== 국어 데이터뱅크 (고1) ===================== */
+const KOR2_SENT = [
+  ["철수가 밥을 먹는다.","철수가","주어"],["철수가 밥을 먹는다.","밥을","목적어"],["철수가 밥을 먹는다.","먹는다","서술어"],
+  ["그는 매우 빠르게 달렸다.","매우","부사어"],["그는 매우 빠르게 달렸다.","빠르게","부사어"],["나는 새 책을 샀다.","새","관형어"],
+  ["그것은 사실이 아니다.","사실이","보어"],["철수는 학생이 되었다.","학생이","보어"],["아, 벌써 저녁이구나!","아,","독립어"],
+  ["예쁜 꽃이 피었다.","예쁜","관형어"],["동생이 크게 웃었다.","크게","부사어"],["선생님께서 학생을 칭찬하셨다.","선생님께서","주어"],
+  ["선생님께서 학생을 칭찬하셨다.","학생을","목적어"],["하늘이 정말 푸르다.","정말","부사어"],["철수는 축구공을 찼다.","축구공을","목적어"],
+  ["그 영화는 매우 지루했다.","그","관형어"],["영수는 반장이 아니다.","반장이","보어"],["우리는 내일 소풍을 간다.","내일","부사어"],
+  ["우와, 정말 멋지다!","우와,","독립어"],["철수가 문을 열었다.","문을","목적어"],["나는 조용히 책을 읽었다.","조용히","부사어"],
+  ["그녀는 가수가 되었다.","가수가","보어"],["새로운 학생이 전학 왔다.","새로운","관형어"],["철수는 매우 정직하다.","매우","부사어"],
+  ["학생들이 운동장에서 뛰논다.","학생들이","주어"],["그 아이는 착하다.","그","관형어"],["철수가 물을 마신다.","철수가","주어"],
+  ["아이가 크게 운다.","크게","부사어"],["영희는 선생님이 되었다.","선생님이","보어"],["철수는 빵을 먹었다.","빵을","목적어"]
+];
+const KOR2_COMPONENT_CHOICES = ["주어","목적어","서술어","관형어","부사어","보어","독립어"];
+const KOR2_HONOR_TYPE = [
+  ["할아버지께서 진지를 드신다.","주체 높임법"],["나는 할머니를 모시고 병원에 갔다.","객체 높임법"],["저는 학교에 갑니다.","상대 높임법"],
+  ["선생님께서 교실에 계신다.","주체 높임법"],["동생이 선생님께 선물을 드렸다.","객체 높임법"],["안녕히 주무셨어요?","상대 높임법"],
+  ["아버지께서 신문을 보신다.","주체 높임법"],["나는 부모님을 뵈러 갔다.","객체 높임법"],["감사합니다.","상대 높임법"],
+  ["할머니께서 편찮으시다.","주체 높임법"],["학생이 선생님께 여쭈어 보았다.","객체 높임법"],["오늘은 날씨가 좋습니다.","상대 높임법"],
+  ["삼촌께서 회사에 다니신다.","주체 높임법"],["나는 할아버지를 모시고 여행을 갔다.","객체 높임법"],["다시 오세요.","상대 높임법"],
+  ["어머니께서 요리를 하신다.","주체 높임법"],["철수가 선생님께 질문을 드렸다.","객체 높임법"],["안녕하세요.","상대 높임법"],
+  ["원장님께서 말씀하셨다.","주체 높임법"],["나는 손님을 모시고 방으로 들어갔다.","객체 높임법"]
+];
+const KOR2_HONOR_CHOICES = ["주체 높임법","객체 높임법","상대 높임법"];
+const KOR2_PIDONG_SADONG = [
+  ["문이 열렸다.","피동"],["엄마가 아기에게 옷을 입혔다.","사동"],["도둑이 경찰에게 잡혔다.","피동"],["선생님이 학생을 웃겼다.","사동"],
+  ["창문이 바람에 닫혔다.","피동"],["아빠가 아이를 재웠다.","사동"],["범인이 경찰에게 쫓겼다.","피동"],["엄마가 아이에게 밥을 먹였다.","사동"],
+  ["나뭇가지가 바람에 꺾였다.","피동"],["형이 동생을 울렸다.","사동"],["모기에게 물렸다.","피동"],["선생님이 학생에게 책을 읽혔다.","사동"],
+  ["벽에 그림이 걸렸다.","피동"],["엄마가 아이를 씻겼다.","사동"],["새가 그물에 걸렸다.","피동"],["선생님이 아이를 앉혔다.","사동"]
+];
+const KOR2_RHETORIC = [
+  ["내 마음은 호수요","은유법"],["그녀는 꽃처럼 아름답다","직유법"],["소나무는 말없이 겨울을 견딘다","의인법"],
+  ["백만 번 말했잖아","과장법"],["찬란한 슬픔의 봄","역설법"],["이것은 소리 없는 아우성","역설법"],
+  ["돌담에 속삭이는 햇발같이","직유법"],["바람이 문을 두드린다","의인법"],["구름에 달 가듯이","직유법"],
+  ["산도 울고 나도 울었다","의인법"],["쥐꼬리만 한 월급","과장법"],["할 말은 태산 같다","과장법"],
+  ["임은 갔지마는 나는 임을 보내지 아니하였습니다","역설법"],["잘한다 잘한다, 사고만 치는구나","반어법"],
+  ["참 잘했군요 (실수했을 때)","반어법"],["시간이 화살처럼 빠르다","직유법"],["파도가 춤을 춘다","의인법"],
+  ["내 마음은 촛불이다","은유법"],["인생은 나그네길","은유법"],["하늘이 도와준 덕분이다 (자기 노력을 낮춤)","반어법"],
+  ["눈물이 바다를 이루었다","과장법"],["겨울 나무가 봄을 기다리며 참는다","의인법"],["우리 집은 궁전이다","은유법"],
+  ["아름다운 이 세상 소풍 끝내는 날","은유법"]
+];
+const KOR2_RHETORIC_CHOICES = ["직유법","은유법","의인법","과장법","역설법","반어법"];
+const KOR2_HANJA = [
+  ["확대","축소"],["증가","감소"],["긍정","부정"],["능동","수동"],["원인","결과"],["추상","구체"],["상승","하락"],
+  ["개방","폐쇄"],["통합","분리"],["진보","보수"],["유입","유출"],["수출","수입"],["공급","수요"],["자유","구속"],
+  ["존경","경멸"],["칭찬","비난"],["성공","실패"],["획득","상실"],["출발","도착"],["정상","비정상"],["필연","우연"],
+  ["절대","상대"],["진실","거짓"],["겸손","오만"],["낙관","비관"],["우월","열등"],["적극","소극"],["원활","정체"],
+  ["수월","곤란"],["신속","지연"],["풍부","빈곤"],["정밀","조잡"],["왕성","쇠퇴"],["냉정","흥분"],["안정","불안"],["명확","모호"]
+];
+const KOR2_IDIOMS2 = [
+  ["형설지공","어려운 환경에서도 꾸준히 노력하여 성공함"],["절차탁마","학문이나 인격을 갈고닦음"],
+  ["부화뇌동","줏대 없이 남의 의견에 따라 움직임"],["견물생심","물건을 보면 갖고 싶은 욕심이 생김"],
+  ["근묵자흑","나쁜 사람과 가까이 하면 나쁜 물이 듦"],["마이동풍","남의 말을 귀담아듣지 않음"],
+  ["수주대토","융통성 없이 어리석게 요행만 바람"],["조삼모사","당장 눈앞의 차이만 알고 결과가 같음을 모름"],
+  ["침소봉대","작은 일을 크게 부풀려 말함"],["안하무인","눈에 보이는 것이 없을 정도로 교만함"],
+  ["오비이락","우연히 일어난 일로 의심을 받음"],["상전벽해","세상이 몰라볼 정도로 크게 변함"],
+  ["위기일발","매우 위태로운 순간"],["전화위복","화가 바뀌어 오히려 복이 됨"],["백년대계","먼 훗날까지 내다보는 큰 계획"],
+  ["자강불식","스스로 힘써 쉬지 않음"],["절치부심","몹시 분하여 이를 갈며 마음을 다잡음"],
+  ["권토중래","실패한 뒤 다시 힘을 회복하여 재기함"],["발분망식","끼니를 잊을 정도로 열심히 노력함"],
+  ["개과천선","잘못을 뉘우치고 바르게 고침"],["명약관화","불을 보듯 분명함"],["목불식정","아주 무식함"],
+  ["부창부수","부부 사이의 화목한 도리"],["언행일치","말과 행동이 일치함"]
+];
+
+function buildKorPoolHS1(){
+  const pool = [];
+  KOR2_SENT.forEach(([sentence,word,correct])=>{
+    const others = KOR2_COMPONENT_CHOICES.filter(c=>c!==correct);
+    const choices = shuffle([correct, ...pick(others,3)]);
+    pool.push(mcItem(`다음 문장에서 "${word}"의 문장 성분으로 알맞은 것은? — "${sentence}"`, choices, choices.indexOf(correct)));
+  });
+  KOR2_HONOR_TYPE.forEach(([sentence,correct])=>{
+    const choices = shuffle(KOR2_HONOR_CHOICES.slice());
+    pool.push(mcItem(`다음 문장에 나타난 높임법의 종류는? — "${sentence}"`, choices, choices.indexOf(correct)));
+  });
+  KOR2_PIDONG_SADONG.forEach(([sentence,correct])=>{
+    const choices = shuffle(["피동","사동"]);
+    pool.push(mcItem(`다음 문장은 피동 표현인가, 사동 표현인가? — "${sentence}"`, choices, choices.indexOf(correct)));
+  });
+  KOR2_RHETORIC.forEach(([phrase,correct])=>{
+    const others = KOR2_RHETORIC_CHOICES.filter(c=>c!==correct);
+    const choices = shuffle([correct, ...pick(others,3)]);
+    pool.push(mcItem(`다음 표현에 쓰인 표현법(수사법)은? — "${phrase}"`, choices, choices.indexOf(correct)));
+  });
+  KOR2_HANJA.forEach(([a,b])=>{
+    pool.push(shortItem(`"${a}"의 반의어를 쓰시오.`, [b]));
+    pool.push(shortItem(`"${b}"의 반의어를 쓰시오.`, [a]));
+  });
+  const allIdiom2Meanings = KOR2_IDIOMS2.map(x=>x[1]);
+  KOR2_IDIOMS2.forEach(([idiom,meaning])=>{
+    const distractors = pick(allIdiom2Meanings.filter(m=>m!==meaning), 3);
+    const choices = shuffle([meaning, ...distractors]);
+    pool.push(mcItem(`사자성어 "${idiom}"의 뜻으로 알맞은 것은?`, choices, choices.indexOf(meaning)));
+  });
+  return pool;
+}
+
+/* ===================== 영어 데이터뱅크 (중학교) ===================== */
 const ENG_VOCAB = [
   ["사과","apple"],["바나나","banana"],["학교","school"],["선생님","teacher"],["학생","student"],
   ["책","book"],["연필","pencil"],["의자","chair"],["책상","desk"],["창문","window"],
@@ -403,7 +532,6 @@ function buildEngPool(){
   ENG_PASTTENSE.forEach(([base,past])=>{
     pool.push(shortItem(`Write the past tense of "${base}".`, [past]));
   });
-  // be동사 인칭 일치 (문법)
   const pronouns = [["I","am"],["You","are"],["He","is"],["She","is"],["We","are"],["They","are"],["It","is"]];
   const professions = ["a doctor","a teacher","a student","a nurse","an artist"];
   pronouns.forEach(([pron,correct])=>{
@@ -411,7 +539,6 @@ function buildEngPool(){
       pool.push(shuffleChoices(`"${pron} ___ ${prof}."`, ["is","are","am"], correct));
     });
   });
-  // 전치사 / 의문사 / 관사 / there is-are 고정 문항
   const fixed = [
     shuffleChoices('"The cat is ___ the box."', ["in","on","at","to"], "in"),
     shuffleChoices('"The picture is ___ the wall."', ["on","in","at","to"], "on"),
@@ -434,7 +561,127 @@ function buildEngPool(){
   return pool;
 }
 
-/* ===================== 수학 문제 생성 ===================== */
+/* ===================== 영어 데이터뱅크 (고1) ===================== */
+const ENG2_VOCAB = [
+  ["경험","experience"],["환경","environment"],["기술","technology"],["사회","society"],["정부","government"],
+  ["경제","economy"],["문화","culture"],["역사","history"],["과학","science"],["예술","art"],
+  ["건강","health"],["질병","disease"],["원인","cause"],["결과","result"],["영향","influence"],
+  ["상황","situation"],["문제","problem"],["해결책","solution"],["기회","opportunity"],["도전","challenge"],
+  ["목표","goal"],["성공","success"],["실패","failure"],["노력","effort"],["능력","ability"],
+  ["책임","responsibility"],["권리","right"],["의무","duty"],["자유","freedom"],["평화","peace"],
+  ["전쟁","war"],["갈등","conflict"],["협력","cooperation"],["경쟁","competition"],["발전","development"],
+  ["변화","change"],["성장","growth"],["인구","population"],["자원","resource"],["에너지","energy"],
+  ["오염","pollution"],["재활용","recycling"],["보호","protection"],["안전","safety"],["위험","danger"],
+  ["규칙","rule"],["법","law"],["정의","justice"],["평등","equality"],["다양성","diversity"],
+  ["존중","respect"],["이해","understanding"],["소통","communication"],["관계","relationship"],["태도","attitude"]
+];
+const ENG2_RELATIVE = [
+  ['"The man ___ is standing there is my uncle."', "who"],
+  ['"The book ___ is on the table is mine."', "which"],
+  ['"This is the house ___ roof is red."', "whose"],
+  ['"I like the movie ___ we watched yesterday."', "that"],
+  ['"She is the girl ___ won the contest."', "who"],
+  ['"The car ___ I bought is fast."', "that"],
+  ['"Do you know the boy ___ sister is a singer?"', "whose"],
+  ['"This is the pen ___ he lost."', "that"]
+];
+const ENG2_GERUND_INF = [
+  ['"I enjoy ___ (read) books."', "reading"],
+  ['"She wants ___ (go) home."', "to go"],
+  ['"He finished ___ (do) his homework."', "doing"],
+  ['"They decided ___ (leave) early."', "to leave"],
+  ['"We should avoid ___ (make) mistakes."', "making"],
+  ['"I hope ___ (see) you soon."', "to see"],
+  ['"She gave up ___ (smoke)."', "smoking"],
+  ['"He plans ___ (study) abroad."', "to study"]
+];
+const ENG2_PASSIVE = [
+  ["Tom wrote this book.","This book was written by Tom."],
+  ["They built the bridge.","The bridge was built by them."],
+  ["She cleans the room every day.","The room is cleaned by her every day."],
+  ["He will finish the project.","The project will be finished by him."],
+  ["The chef cooked the meal.","The meal was cooked by the chef."],
+  ["People speak English in many countries.","English is spoken in many countries."],
+  ["The teacher checks our homework.","Our homework is checked by the teacher."],
+  ["They invited us to the party.","We were invited to the party by them."],
+  ["The company hired new employees.","New employees were hired by the company."],
+  ["Someone stole my bike.","My bike was stolen."],
+  ["The artist painted the picture.","The picture was painted by the artist."],
+  ["The farmer grows rice.","Rice is grown by the farmer."],
+  ["The workers finished the building.","The building was finished by the workers."],
+  ["She wrote a letter.","A letter was written by her."],
+  ["They will hold the meeting tomorrow.","The meeting will be held tomorrow."],
+  ["He broke the window.","The window was broken by him."],
+  ["The children read the story.","The story was read by the children."],
+  ["The manager solved the problem.","The problem was solved by the manager."],
+  ["The government built new roads.","New roads were built by the government."],
+  ["The dog bit the man.","The man was bitten by the dog."]
+];
+const ENG2_COMPARATIVE = [
+  ['"This is the ___ (good) restaurant in town."', ["best","better","goodest","more good"], "best"],
+  ['"He is ___ (bad) than before."', ["worse","worst","badder","more bad"], "worse"],
+  ['"She has ___ (much) money than I do."', ["more","most","much","many"], "more"],
+  ['"This is the ___ (interesting) book I\'ve read."', ["most interesting","interestingest","more interesting","interesting"], "most interesting"],
+  ['"It is ___ (cold) today than yesterday."', ["colder","coldest","more cold","most cold"], "colder"],
+  ['"That was the ___ (bad) movie ever."', ["worst","worse","baddest","more bad"], "worst"],
+  ['"He runs ___ (fast) than his brother."', ["faster","fastest","more fast","most fast"], "faster"],
+  ['"This is the ___ (beautiful) place I\'ve seen."', ["most beautiful","beautifulest","more beautiful","beautiful"], "most beautiful"],
+  ['"She is ___ (tall) than her sister."', ["taller","tallest","more tall","most tall"], "taller"],
+  ['"This is the ___ (expensive) car in the shop."', ["most expensive","expensivest","more expensive","expensive"], "most expensive"]
+];
+const ENG2_CONJUNCTION = [
+  ['"___ it was raining, we went out."', ["Although","Because","So","And"], "Although"],
+  ['"I stayed home ___ I was sick."', ["because","although","so","but"], "because"],
+  ['"He studied hard, ___ he passed the exam."', ["so","although","because","or"], "so"],
+  ['"___ she is young, she is very wise."', ["Although","Because","So","And"], "Although"],
+  ['"I like tea ___ my sister likes coffee."', ["while","because","so","although"], "while"],
+  ['"I have not seen him ___ last year."', ["since","for","during","while"], "since"],
+  ['"You can stay ___ you are quiet."', ["as long as","because","so that","although"], "as long as"],
+  ['"She left early ___ she could catch the train."', ["so that","although","because of","despite"], "so that"]
+];
+const ENG2_IDIOMS = [
+  ["give up","포기하다"],["look for","찾다"],["take care of","돌보다"],["run out of","다 떨어지다"],
+  ["put off","미루다"],["come up with","아이디어를 생각해내다"],["get along with","잘 지내다"],["make up for","보상하다"],
+  ["turn down","거절하다"],["figure out","알아내다"],["keep up with","뒤처지지 않고 따라가다"],["break down","고장 나다"],
+  ["carry out","수행하다"],["bring about","초래하다"],["deal with","다루다"],["hand in","제출하다"],
+  ["look forward to","기대하다"],["point out","지적하다"],["set up","설치하다"],["show up","나타나다"],
+  ["stand for","상징하다"],["take off","벗다/이륙하다"],["work out","운동하다/잘 풀리다"],["call off","취소하다"],
+  ["pass away","돌아가시다"],["pick up","집어 들다"],["catch up with","따라잡다"],["get over","극복하다"],
+  ["go through","겪다"],["rely on","의지하다"]
+];
+
+function buildEngPoolHS1(){
+  const pool = [];
+  ENG2_VOCAB.forEach(([kr,en])=>{
+    pool.push(shortItem(`"${kr}"를 뜻하는 영어 단어를 쓰시오.`, [en]));
+  });
+  ENG2_RELATIVE.forEach(([sentence,correct])=>{
+    pool.push(shuffleChoices(sentence, ["who","which","whose","that"], correct));
+  });
+  ENG2_GERUND_INF.forEach(([sentence,correct])=>{
+    const distractorsPool = ["reading","to go","doing","to leave","making","to see","smoking","to study"].filter(x=>x!==correct);
+    const choices = shuffle([correct, ...pick(distractorsPool,3)]);
+    pool.push(mcItem(sentence, choices, choices.indexOf(correct)));
+  });
+  ENG2_PASSIVE.forEach(([active,passive])=>{
+    pool.push(shortItem(`다음 문장을 수동태로 바꾸어 쓰시오: "${active}"`, [passive]));
+  });
+  ENG2_COMPARATIVE.forEach(([sentence,choices,correct])=>{
+    pool.push(shuffleChoices(sentence, choices, correct));
+  });
+  ENG2_CONJUNCTION.forEach(([sentence,choices,correct])=>{
+    pool.push(shuffleChoices(sentence, choices, correct));
+  });
+  const allIdiomMeanings = ENG2_IDIOMS.map(x=>x[1]);
+  ENG2_IDIOMS.forEach(([phrase,meaning])=>{
+    const distractors = pick(allIdiomMeanings.filter(m=>m!==meaning), 3);
+    const choices = shuffle([meaning, ...distractors]);
+    pool.push(mcItem(`숙어 "${phrase}"의 뜻으로 알맞은 것은?`, choices, choices.indexOf(meaning)));
+  });
+  return pool;
+}
+
+/* ===================== 수학 문제 생성 (중학교) ===================== */
 function pairsGrid(aMin,aMax,bMin,bMax){
   const arr=[];
   for(let a=aMin;a<=aMax;a++) for(let b=bMin;b<=bMax;b++) arr.push([a,b]);
@@ -465,33 +712,26 @@ const MATH_CONCEPTS = [
 
 function buildMathPool(){
   const pool = [];
-  // 덧셈
   pairsGrid(2,9,2,9).forEach(([a,b])=>{
     pool.push(shortItem(`${a} + ${b} = ?`, [String(a+b)]));
   });
-  // 뺄셈 (a>b)
   for(let a=10;a<=39;a++){
     const b = 2 + (a % 8);
     if(b<a) pool.push(shortItem(`${a} - ${b} = ?`, [String(a-b)]));
   }
-  // 곱셈 (구구단)
   pairsGrid(2,9,2,9).forEach(([a,b])=>{
     pool.push(shortItem(`${a} × ${b} = ?`, [String(a*b)]));
   });
-  // 나눗셈 (나누어떨어짐)
   pairsGrid(2,9,2,9).forEach(([b,k])=>{
     const a=b*k;
     pool.push(shortItem(`${a} ÷ ${b} = ?`, [String(k)]));
   });
-  // 혼합계산 (사칙연산 순서)
   for(let a=2;a<=6;a++) for(let b=2;b<=6;b++) for(let c=2;c<=4;c++){
     pool.push(shortItem(`${a} + ${b} × ${c} = ?`, [String(a+b*c)]));
   }
-  // 괄호 혼합계산
   for(let a=2;a<=6;a++) for(let b=2;b<=6;b++) for(let c=2;c<=4;c++){
     pool.push(shortItem(`(${a} + ${b}) × ${c} = ?`, [String((a+b)*c)]));
   }
-  // 퍼센트
   const percents=[10,20,25,50,75];
   const bases=[20,40,60,80,100,120,160,200,240,300,400,500,600,800,1000,20,40,60,80,120];
   bases.forEach((base,i)=>{
@@ -500,7 +740,6 @@ function buildMathPool(){
       pool.push(shortItem(`${base}의 ${p}%는 얼마인가?`, [String(base*p/100)]));
     }
   });
-  // 분수 덧셈(같은 분모)
   for(let d=4; d<=12; d++){
     for(let a=1; a<d-1; a++){
       const b = d-a-1>0 ? d-a-1 : 1;
@@ -511,39 +750,31 @@ function buildMathPool(){
       }
     }
   }
-  // 기약분수 만들기
   pairsGrid(2,12,2,12).forEach(([n,k])=>{
     const num=n*k, den=(n+1)*k;
     const g=gcd(num,den);
     pool.push(shortItem(`${num}/${den}을 기약분수로 나타내면?`, [`${num/g}/${den/g}`]));
   });
-  // 일차방정식 x + a = b
   for(let a=1;a<=25;a++){
     const x = 2 + (a%20);
     const b = a+x;
     pool.push(shortItem(`x + ${a} = ${b} 일 때, x의 값은?`, [String(x)]));
   }
-  // 일차방정식 a * x = b
   pairsGrid(2,9,2,9).forEach(([a,x])=>{
     const b=a*x;
     pool.push(shortItem(`${a}x = ${b} 일 때, x의 값은?`, [String(x)]));
   });
-  // 제곱, 세제곱
   for(let n=2;n<=15;n++) pool.push(shortItem(`${n}² (${n}의 제곱)의 값은?`, [String(n*n)]));
   for(let n=2;n<=10;n++) pool.push(shortItem(`${n}³ (${n}의 세제곱)의 값은?`, [String(n*n*n)]));
-  // 최대공약수
   [[12,18],[8,12],[15,20],[24,36],[9,15],[14,21],[16,24],[18,27],[10,25],[20,30],[21,28],[6,9],[12,16],[25,35],[30,45]]
     .forEach(([a,b])=>pool.push(shortItem(`${a}와 ${b}의 최대공약수는?`, [String(gcd(a,b))])));
-  // 최소공배수
   [[4,6],[3,5],[6,8],[4,10],[5,6],[3,4],[6,9],[8,12],[9,12],[2,7],[5,10],[4,5],[6,10],[3,8],[10,15]]
     .forEach(([a,b])=>pool.push(shortItem(`${a}와 ${b}의 최소공배수는?`, [String(lcm(a,b))])));
-  // 음수 덧셈/뺄셈
   for(let i=1;i<=25;i++){
     const a = -1*(1+(i%15));
     const b = 2+(i%20);
     pool.push(shortItem(`${a} + ${b} = ?`, [String(a+b)]));
   }
-  // 원의 둘레 / 넓이 (파이=3.14)
   for(let r=1;r<=15;r++){
     pool.push(shortItem(`반지름이 ${r}cm인 원의 둘레는? (π=3.14로 계산, 소수 둘째 자리까지 쓰시오)`, [(2*3.14*r).toFixed(2)]));
     pool.push(shortItem(`반지름이 ${r}cm인 원의 넓이는? (π=3.14로 계산, 소수 둘째 자리까지 쓰시오)`, [(3.14*r*r).toFixed(2)]));
@@ -552,15 +783,139 @@ function buildMathPool(){
   return pool;
 }
 
+/* ===================== 수학 문제 생성 (고1) ===================== */
+const MATH_CONCEPTS_HS1 = [
+  mcItem("다항식 x²+5x+6을 인수분해하면?", ["(x+1)(x+6)","(x+2)(x+3)","(x+2)(x+4)","(x+1)(x+5)"], 1),
+  mcItem("이차방정식이란 무엇인가?", ["미지수의 최고차항이 2차인 방정식","미지수가 없는 방정식","1차식으로만 이루어진 방정식","미지수가 3개인 방정식"], 0),
+  mcItem("판별식 D = b²-4ac 에서 D>0일 때 이차방정식의 실근의 개수는?", ["0개","1개","2개","무수히 많다"], 2),
+  mcItem("판별식 D = b²-4ac 에서 D=0일 때 이차방정식의 실근의 개수는?", ["0개(중근 아님)","1개(중근)","2개(서로 다른 근)","무수히 많다"], 1),
+  mcItem("두 점 사이의 거리 공식은? (두 점 (x1,y1),(x2,y2))", ["√((x2-x1)²+(y2-y1)²)","(x2-x1)+(y2-y1)","(x2-x1)×(y2-y1)","√(x2-x1)+√(y2-y1)"], 0),
+  mcItem("직선의 기울기를 구하는 공식은?", ["(y2-y1)/(x2-x1)","(x2-x1)/(y2-y1)","(y2+y1)/(x2+x1)","(x2-x1)+(y2-y1)"], 0),
+  mcItem("중심이 원점이고 반지름이 r인 원의 방정식은?", ["x+y=r","x²+y²=r","x²+y²=r²","xy=r²"], 2),
+  mcItem("복소수 a+bi에서 b=0이면 이 수는?", ["실수","허수","무리수","순허수"], 0),
+  mcItem("다음 중 무리수인 것은?", ["√4","√9","√2","√16"], 2),
+  mcItem("지수법칙 aᵐ×aⁿ 의 결과는?", ["a^(m+n)","a^(m-n)","a^(mn)","a^(m/n)"], 0),
+  mcItem("지수법칙 (aᵐ)ⁿ 의 결과는?", ["a^(m+n)","a^(m-n)","a^(mn)","a^(m/n)"], 2),
+  mcItem("nPr (순열)을 구하는 공식은?", ["n!/(n-r)!","n!/r!","n!/(r!(n-r)!)","n!×r!"], 0),
+  mcItem("nCr (조합)을 구하는 공식은?", ["n!/(n-r)!","n!/r!","n!/(r!(n-r)!)","n!×r!"], 2),
+  mcItem("나머지정리에 따르면 다항식 P(x)를 (x-a)로 나눈 나머지는?", ["P(0)","P(a)","P(-a)","P(1)"], 1),
+  mcItem("이차부등식 (x-2)(x-5)>0의 해는?", ["2<x<5","x<2 또는 x>5","x<-2 또는 x>-5","-5<x<-2"], 1),
+  mcItem("이차부등식 (x-2)(x-5)<0의 해는?", ["2<x<5","x<2 또는 x>5","x<-2 또는 x>-5","-5<x<-2"], 0),
+  mcItem("절댓값 방정식 |x|=5의 해는?", ["x=5","x=-5","x=5 또는 x=-5","해가 없다"], 2),
+  mcItem("삼각형의 무게중심 좌표를 구하는 공식은? (세 꼭짓점 (x1,y1),(x2,y2),(x3,y3))", ["((x1+x2+x3)/3,(y1+y2+y3)/3)","(x1+x2+x3,y1+y2+y3)","((x1+x2)/2,(y1+y2)/2)","(x1×x2×x3,y1×y2×y3)"], 0),
+  mcItem("두 점의 중점 좌표 공식은?", ["((x1+x2)/2,(y1+y2)/2)","(x2-x1,y2-y1)","(x1×x2,y1×y2)","(x1+x2,y1+y2)"], 0),
+  mcItem("완전제곱식 x²+6x+9는 어떻게 인수분해되는가?", ["(x+3)²","(x+9)²","(x-3)²","(x+3)(x-3)"], 0)
+];
+
+function buildMathPoolHS1(){
+  const pool = [];
+  // 다항식 덧셈/뺄셈
+  for(let a=2;a<=9;a++) for(let c=2;c<=9;c++){
+    if(a===c) continue;
+    const b = ((a*c)%9)+1, d = ((a+c)%7)+1;
+    pool.push(shortItem(`(${polyStr(a,b)}) + (${polyStr(c,d)})를 간단히 하시오.`, [polyStr(a+c,b+d)]));
+    pool.push(shortItem(`(${polyStr(a,b)}) - (${polyStr(c,d)})를 간단히 하시오.`, [polyStr(a-c,b-d)]));
+  }
+  // 단항식 × 다항식 전개
+  for(let k=2;k<=6;k++) for(let a=2;a<=6;a++) for(let b=1;b<=5;b++){
+    pool.push(shortItem(`${k}x(${a}x+${b})를 전개하시오. (예: 6x²+3x)`, [`${k*a}x²+${k*b}x`]));
+  }
+  // 인수분해 x²+(a+b)x+ab
+  for(let a=1;a<=9;a++) for(let b=a+1;b<=9;b++){
+    pool.push(shortItem(`x² + ${a+b}x + ${a*b}를 인수분해하시오. (예: (x+1)(x+2))`, [`(x+${a})(x+${b})`]));
+  }
+  // 완전제곱식
+  for(let a=1;a<=9;a++){
+    pool.push(shortItem(`x² + ${2*a}x + ${a*a}를 인수분해하시오. (예: (x+1)²)`, [`(x+${a})²`]));
+    pool.push(shortItem(`x² - ${2*a}x + ${a*a}를 인수분해하시오. (예: (x-1)²)`, [`(x-${a})²`]));
+  }
+  // 이차방정식 두 해의 합/곱
+  for(let a=1;a<=9;a++) for(let b=a+1;b<=9;b++){
+    pool.push(shortItem(`이차방정식 x² - ${a+b}x + ${a*b} = 0의 두 해의 합은?`, [String(a+b)]));
+    pool.push(shortItem(`이차방정식 x² - ${a+b}x + ${a*b} = 0의 두 해의 곱은?`, [String(a*b)]));
+  }
+  // 이차부등식
+  for(let a=1;a<=9;a++) for(let b=a+1;b<=9;b++){
+    pool.push(shuffleChoices(`이차부등식 (x-${a})(x-${b}) > 0의 해는?`,
+      [`x<${a} 또는 x>${b}`, `${a}<x<${b}`, `x<-${a} 또는 x>-${b}`, `x=${a} 또는 x=${b}`],
+      `x<${a} 또는 x>${b}`));
+    pool.push(shuffleChoices(`이차부등식 (x-${a})(x-${b}) < 0의 해는?`,
+      [`${a}<x<${b}`, `x<${a} 또는 x>${b}`, `x<-${a} 또는 x>-${b}`, `x=${a} 또는 x=${b}`],
+      `${a}<x<${b}`));
+  }
+  // 제곱근 간단히
+  [[8,2,2],[12,2,3],[18,3,2],[20,2,5],[24,2,6],[27,3,3],[28,2,7],[32,4,2],[45,3,5],[48,4,3],
+   [50,5,2],[63,3,7],[72,6,2],[75,5,3],[80,4,5],[98,7,2],[108,6,3],[125,5,5],[147,7,3],[162,9,2]]
+    .forEach(([n,k,m])=>pool.push(shortItem(`√${n}을 근호 안이 가장 작은 자연수가 되도록 간단히 하시오. (예: 2√3)`, [`${k}√${m}`])));
+  // 지수법칙 (수치 계산)
+  [2,3,5].forEach(base=>{
+    for(let m=2;m<=6;m++) for(let n=2;n<=4;n++){
+      pool.push(shortItem(`${base}^${m} × ${base}^${n}의 값은?`, [String(Math.pow(base,m+n))]));
+    }
+  });
+  // 절댓값 방정식 (두 해의 합)
+  for(let a=1;a<=10;a++) for(let b=1;b<=10;b++){
+    pool.push(shortItem(`방정식 |x-${a}|=${b}의 두 해의 합은?`, [String(2*a)]));
+  }
+  // 두 점 사이의 거리 (피타고라스 세트 활용)
+  [[3,4,5],[6,8,10],[5,12,13],[8,15,17],[7,24,25],[9,12,15],[12,16,20],[10,24,26]].forEach(([dx,dy,dist])=>{
+    pool.push(shortItem(`두 점 (0,0)과 (${dx},${dy}) 사이의 거리는?`, [String(dist)]));
+  });
+  // 두 점의 중점
+  for(let x1=0;x1<=8;x1+=2) for(let y1=0;y1<=8;y1+=2){
+    const x2=x1+4, y2=y1+6;
+    pool.push(shortItem(`두 점 (${x1},${y1})과 (${x2},${y2})의 중점 좌표는? (예: (1,2))`, [`(${(x1+x2)/2},${(y1+y2)/2})`]));
+  }
+  // 직선의 기울기
+  [[0,0,2,4],[0,0,3,6],[1,1,3,5],[2,1,5,7],[0,1,2,5],[1,2,4,8],[0,0,4,2],[0,0,6,3]].forEach(([x1,y1,x2,y2])=>{
+    pool.push(shortItem(`두 점 (${x1},${y1})과 (${x2},${y2})을 지나는 직선의 기울기는?`, [String((y2-y1)/(x2-x1))]));
+  });
+  // 원의 방정식 (표준형, 중심 원점, 반지름 r → x²+y²=r² 의 오른쪽 값)
+  for(let r=1;r<=12;r++){
+    pool.push(shortItem(`중심이 원점이고 반지름이 ${r}인 원의 방정식 x²+y²=?  (오른쪽 값만 쓰시오)`, [String(r*r)]));
+  }
+  // 순열/조합
+  for(let n=3;n<=7;n++) for(let r=1;r<=Math.min(n,4);r++){
+    pool.push(shortItem(`${n}P${r} (순열)의 값은?`, [String(factorial(n)/factorial(n-r))]));
+    pool.push(shortItem(`${n}C${r} (조합)의 값은?`, [String(factorial(n)/(factorial(r)*factorial(n-r)))]));
+  }
+  // 나머지정리 (다항식에 값 대입)
+  for(let a=1;a<=6;a++) for(let b=1;b<=6;b++) for(let c of [1,2,3]){
+    pool.push(shortItem(`다항식 x² + ${a}x + ${b}에 x=${c}를 대입한 값은?`, [String(c*c+a*c+b)]));
+  }
+  pool.push(...MATH_CONCEPTS_HS1);
+  return pool;
+}
+
 /* ===================== 전체 문제 풀 ===================== */
-const POOLS = { kor: buildKorPool(), eng: buildEngPool(), math: buildMathPool() };
+const korMs = tagLevel(buildKorPool(), 'ms');
+const korHs1 = tagLevel(buildKorPoolHS1(), 'hs1');
+const engMs = tagLevel(buildEngPool(), 'ms');
+const engHs1 = tagLevel(buildEngPoolHS1(), 'hs1');
+const mathMs = tagLevel(buildMathPool(), 'ms');
+const mathHs1 = tagLevel(buildMathPoolHS1(), 'hs1');
+
+const POOLS = {
+  kor: korMs.concat(korHs1),
+  eng: engMs.concat(engHs1),
+  math: mathMs.concat(mathHs1)
+};
 const QUESTIONS_PER_SUBJECT = 20;
 
+function poolByLevel(subject, level){
+  if(level === 'all') return POOLS[subject];
+  return POOLS[subject].filter(q=>q.level===level);
+}
+
 /* 문항 수 표시 */
-Object.keys(SUBJECT_NAME).forEach(s=>{
-  const el = document.getElementById('cnt-'+s);
-  if(el) el.textContent = `${POOLS[s].length}문항 중 ${QUESTIONS_PER_SUBJECT}문항 랜덤 출제`;
-});
+let selectedLevel = 'ms';
+function updateSubjectCounts(){
+  Object.keys(SUBJECT_NAME).forEach(s=>{
+    const el = document.getElementById('cnt-'+s);
+    if(el) el.textContent = `${poolByLevel(s, selectedLevel).length}문항 중 ${QUESTIONS_PER_SUBJECT}문항 랜덤 출제`;
+  });
+}
+updateSubjectCounts();
 
 /* ===================== 모드 네비게이션 ===================== */
 document.getElementById('navStudy').addEventListener('click', ()=>{
@@ -577,24 +932,43 @@ function setMode(mode){
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
+/* 테스트 화면 수준 선택 */
+document.querySelectorAll('#testLevelBoxes .level-box').forEach(box=>{
+  box.addEventListener('click', ()=>{
+    selectedLevel = box.dataset.l;
+    document.querySelectorAll('#testLevelBoxes .level-box').forEach(b=>b.classList.toggle('on', b===box));
+    updateSubjectCounts();
+  });
+});
+
 /* ===================== 학습 화면 ===================== */
 const STUDY_CATEGORIES = {
   kor: [
-    {key:'antonym', label:'반의어', data:KOR_ANTONYMS},
-    {key:'synonym', label:'유의어', data:KOR_SYNONYMS},
-    {key:'honorific', label:'높임말', data:KOR_HONORIFIC},
-    {key:'idiom', label:'사자성어', data:KOR_IDIOMS},
-    {key:'spelling', label:'맞춤법', data:KOR_SPELLING},
-    {key:'pos', label:'품사', data:KOR_POS}
+    {key:'antonym', label:'반의어', data:KOR_ANTONYMS, level:'ms'},
+    {key:'synonym', label:'유의어', data:KOR_SYNONYMS, level:'ms'},
+    {key:'honorific', label:'높임말', data:KOR_HONORIFIC, level:'ms'},
+    {key:'idiom', label:'사자성어', data:KOR_IDIOMS, level:'ms'},
+    {key:'spelling', label:'맞춤법', data:KOR_SPELLING, level:'ms'},
+    {key:'pos', label:'품사', data:KOR_POS, level:'ms'},
+    {key:'sentcomp', label:'문장 성분', data:KOR2_SENT.map(([s,w,c])=>[`${s} (밑줄: ${w})`, c]), level:'hs1'},
+    {key:'honortype', label:'높임법 종류', data:KOR2_HONOR_TYPE, level:'hs1'},
+    {key:'pidongsadong', label:'피동·사동', data:KOR2_PIDONG_SADONG, level:'hs1'},
+    {key:'rhetoric', label:'표현법', data:KOR2_RHETORIC, level:'hs1'},
+    {key:'hanja', label:'한자어 반의어', data:KOR2_HANJA, level:'hs1'},
+    {key:'idiom2', label:'사자성어(심화)', data:KOR2_IDIOMS2, level:'hs1'}
   ],
   eng: [
-    {key:'vocab', label:'단어', data:ENG_VOCAB},
-    {key:'opposite', label:'반의어', data:ENG_OPPOSITES},
-    {key:'plural', label:'복수형', data:ENG_PLURALS},
-    {key:'past', label:'과거형', data:ENG_PASTTENSE}
+    {key:'vocab', label:'단어', data:ENG_VOCAB, level:'ms'},
+    {key:'opposite', label:'반의어', data:ENG_OPPOSITES, level:'ms'},
+    {key:'plural', label:'복수형', data:ENG_PLURALS, level:'ms'},
+    {key:'past', label:'과거형', data:ENG_PASTTENSE, level:'ms'},
+    {key:'vocab2', label:'단어(고1)', data:ENG2_VOCAB, level:'hs1'},
+    {key:'idiom2', label:'숙어', data:ENG2_IDIOMS, level:'hs1'},
+    {key:'passive', label:'수동태', data:ENG2_PASSIVE, level:'hs1'}
   ],
   math: [
-    {key:'formula', label:'공식노트', data:null}
+    {key:'formula', label:'공식노트', data:null, level:'ms'},
+    {key:'formula2', label:'공식노트(고1)', data:null, level:'hs1'}
   ]
 };
 const MATH_FORMULAS = [
@@ -611,15 +985,44 @@ const MATH_FORMULAS = [
   {title:"소수와 합성수", body:"소수는 1과 자기 자신만을 약수로 갖는 수(1 제외), 합성수는 그 외의 수.", ex:"예) 2,3,5,7,11은 소수 / 4,6,8,9는 합성수"},
   {title:"백분율(퍼센트)", body:"전체를 100으로 볼 때의 비율. N의 P% = N × P ÷ 100", ex:"예) 20의 25% = 20×25÷100 = 5"}
 ];
+const MATH_FORMULAS_HS1 = [
+  {title:"인수분해 공식", body:"x²+(a+b)x+ab = (x+a)(x+b)", ex:"예) x²+5x+6 = (x+2)(x+3)"},
+  {title:"완전제곱식", body:"x²+2ax+a² = (x+a)²,  x²-2ax+a² = (x-a)²", ex:"예) x²+6x+9 = (x+3)²"},
+  {title:"이차방정식의 판별식", body:"D = b²-4ac. D>0이면 서로 다른 두 실근, D=0이면 중근, D<0이면 실근 없음.", ex:"예) x²-5x+6=0 → D=25-24=1>0 → 두 실근"},
+  {title:"이차방정식 근과 계수의 관계", body:"x²-(합)x+(곱)=0 형태일 때, 두 해의 합과 곱을 바로 구할 수 있다.", ex:"예) x²-7x+12=0 → 두 해의 합 7, 곱 12"},
+  {title:"이차부등식의 해", body:"(x-a)(x-b)>0 (a<b) → x<a 또는 x>b,  (x-a)(x-b)<0 → a<x<b", ex:"예) (x-2)(x-5)<0 → 2<x<5"},
+  {title:"제곱근의 간단히 하기", body:"근호 안의 수를 (제곱수)×(나머지)로 나누어 √(a²b) = a√b", ex:"예) √12 = √(4×3) = 2√3"},
+  {title:"지수법칙", body:"aᵐ×aⁿ=a^(m+n),  (aᵐ)ⁿ=a^(mn),  aᵐ÷aⁿ=a^(m-n)", ex:"예) 2³×2⁴ = 2⁷ = 128"},
+  {title:"두 점 사이의 거리", body:"두 점 (x1,y1),(x2,y2) 사이의 거리 = √((x2-x1)²+(y2-y1)²)", ex:"예) (0,0)과 (3,4) → √(9+16)=5"},
+  {title:"두 점의 중점", body:"중점 좌표 = ((x1+x2)/2, (y1+y2)/2)", ex:"예) (0,0)과 (4,6)의 중점 → (2,3)"},
+  {title:"직선의 기울기", body:"기울기 = (y2-y1)/(x2-x1)", ex:"예) (0,0)과 (2,4) → 기울기 2"},
+  {title:"원의 방정식(표준형)", body:"중심이 원점, 반지름 r인 원: x²+y²=r²", ex:"예) 반지름 3 → x²+y²=9"},
+  {title:"순열과 조합", body:"nPr = n!/(n-r)!  (순서 O),  nCr = n!/(r!(n-r)!)  (순서 X)", ex:"예) 5P2=20, 5C2=10"},
+  {title:"나머지정리", body:"다항식 P(x)를 (x-a)로 나눈 나머지는 P(a)와 같다.", ex:"예) P(x)=x²+3x+2, P(1)=1+3+2=6"},
+  {title:"절댓값 방정식", body:"|x-a|=b (b≥0)의 해는 x=a+b 또는 x=a-b", ex:"예) |x-3|=5 → x=8 또는 x=-2"}
+];
 
 let studySubject = 'kor';
 let studyCategory = null;
+let studyLevel = 'ms';
+
+document.querySelectorAll('#studyLevelBoxes .level-box').forEach(box=>{
+  box.addEventListener('click', ()=>{
+    studyLevel = box.dataset.l;
+    document.querySelectorAll('#studyLevelBoxes .level-box').forEach(b=>b.classList.toggle('on', b===box));
+    const cats = STUDY_CATEGORIES[studySubject].filter(c=> studyLevel==='all' || c.level===studyLevel);
+    studyCategory = cats.length ? cats[0].key : STUDY_CATEGORIES[studySubject][0].key;
+    renderStudyChips();
+    renderStudyBody();
+  });
+});
 
 document.querySelectorAll('#studySubjectTabs button').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     studySubject = btn.dataset.s;
     document.querySelectorAll('#studySubjectTabs button').forEach(b=>b.classList.toggle('active', b===btn));
-    studyCategory = STUDY_CATEGORIES[studySubject][0].key;
+    const cats = STUDY_CATEGORIES[studySubject].filter(c=> studyLevel==='all' || c.level===studyLevel);
+    studyCategory = cats.length ? cats[0].key : STUDY_CATEGORIES[studySubject][0].key;
     renderStudyChips();
     renderStudyBody();
     document.getElementById('studyCtaBtn').dataset.s = studySubject;
@@ -629,7 +1032,8 @@ document.querySelectorAll('#studySubjectTabs button').forEach(btn=>{
 function renderStudyChips(){
   const wrap = document.getElementById('studyCatChips');
   wrap.innerHTML = '';
-  STUDY_CATEGORIES[studySubject].forEach(cat=>{
+  const cats = STUDY_CATEGORIES[studySubject].filter(c=> studyLevel==='all' || c.level===studyLevel);
+  cats.forEach(cat=>{
     const b = document.createElement('button');
     b.textContent = cat.label;
     b.className = cat.key===studyCategory ? 'active' : '';
@@ -647,7 +1051,8 @@ function renderStudyBody(){
   body.innerHTML = '';
 
   if(studySubject === 'math'){
-    MATH_FORMULAS.forEach(f=>{
+    const list = studyCategory === 'formula2' ? MATH_FORMULAS_HS1 : MATH_FORMULAS;
+    list.forEach(f=>{
       const card = document.createElement('div');
       card.className = 'formula-card';
       card.innerHTML = `<h4>${escapeHtml(f.title)}</h4><p>${escapeHtml(f.body)}</p><div class="ex">${escapeHtml(f.ex)}</div>`;
@@ -657,6 +1062,7 @@ function renderStudyBody(){
   }
 
   const cat = STUDY_CATEGORIES[studySubject].find(c=>c.key===studyCategory);
+  if(!cat) return;
   const grid = document.createElement('div');
   grid.className = 'flash-grid';
   cat.data.forEach(([front,back])=>{
@@ -670,17 +1076,23 @@ function renderStudyBody(){
 }
 
 document.getElementById('studyCtaBtn').addEventListener('click', ()=>{
-  document.querySelectorAll('.subject-box').forEach(box=>{
+  document.querySelectorAll('#screenStart .subject-box').forEach(box=>{
     const on = box.dataset.s === studySubject;
     box.classList.toggle('on', on);
     if(on) selectedSubjects = new Set([studySubject]);
   });
+  document.querySelectorAll('#testLevelBoxes .level-box').forEach(box=>{
+    const on = box.dataset.l === studyLevel;
+    box.classList.toggle('on', on);
+    if(on) selectedLevel = studyLevel;
+  });
+  updateSubjectCounts();
   setMode('test');
   show('screenStart');
   document.getElementById('studentName').focus();
 });
 
-studyCategory = STUDY_CATEGORIES.kor[0].key;
+studyCategory = STUDY_CATEGORIES.kor.filter(c=>c.level==='ms')[0].key;
 renderStudyChips();
 renderStudyBody();
 
@@ -721,12 +1133,13 @@ function buildQuiz(){
   body.innerHTML = '';
 
   order.forEach(subject=>{
-    const drawn = pick(POOLS[subject], Math.min(QUESTIONS_PER_SUBJECT, POOLS[subject].length));
+    const src = poolByLevel(subject, selectedLevel);
+    const drawn = pick(src, Math.min(QUESTIONS_PER_SUBJECT, src.length));
 
     const title = document.createElement('div');
     title.className = 'section-title';
     title.dataset.s = subject;
-    title.innerHTML = `<span class="dot"></span>${SUBJECT_NAME[subject]} (${drawn.length}문항)`;
+    title.innerHTML = `<span class="dot"></span>${SUBJECT_NAME[subject]} · ${LEVEL_NAME[selectedLevel]} (${drawn.length}문항)`;
     body.appendChild(title);
 
     drawn.forEach((q, idx)=>{
@@ -841,7 +1254,7 @@ function gradeAndShowResult(){
   const now = new Date();
   const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
   document.getElementById('resultName').textContent = `${name} 학생의 채점 결과`;
-  document.getElementById('resultMeta').textContent = `응시일: ${dateStr}`;
+  document.getElementById('resultMeta').textContent = `응시일: ${dateStr} · 수준: ${LEVEL_NAME[selectedLevel]}`;
 
   // 점수 카드
   const scoreGrid = document.getElementById('scoreGrid');

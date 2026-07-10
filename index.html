@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>기초학력 마스터 - 국영수 학습·진단</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --kor:#4c6ef5; --eng:#12b886; --math:#f76707;
@@ -168,6 +170,31 @@
   .study-cta[data-s=eng]{background:linear-gradient(135deg,#12b886,#099268);}
   .study-cta[data-s=math]{background:linear-gradient(135deg,#f76707,#e8590c);}
 
+  /* 이어하기 배너 */
+  .resume-banner{
+    border:2px solid #7048e8; background:#f2ecff; border-radius:12px; padding:16px; margin-bottom:16px;
+  }
+  .resume-banner .title{font-weight:800; margin-bottom:4px; color:#5f3dc4;}
+  .resume-banner .desc{font-size:13px; color:var(--sub); margin-bottom:12px;}
+  .resume-banner .btns{display:flex; gap:8px;}
+  .resume-banner .btns button{flex:1; padding:10px; font-size:14px;}
+  .resume-banner .btn-resume{background:#7048e8; color:#fff;}
+  .resume-banner .btn-fresh{background:#fff; color:var(--sub); border:1.5px solid var(--border);}
+  .last-score-banner{
+    border:1.5px solid var(--border); background:#f8f9fb; border-radius:12px; padding:14px 16px; margin-bottom:16px; font-size:13px; color:var(--sub);
+  }
+  .last-score-banner b{color:var(--text);}
+  .cloud-status{
+    text-align:center; font-size:12px; color:var(--sub); background:#fff3cd; border:1px solid #ffe08a;
+    border-radius:8px; padding:8px 12px; margin:0 16px 8px; max-width:820px; margin-left:auto; margin-right:auto;
+  }
+
+  /* 교사 화면 */
+  #teacherTable{width:100%; border-collapse:collapse; font-size:13px;}
+  #teacherTable th{text-align:left; padding:10px 8px; border-bottom:2px solid var(--border); color:var(--sub); font-size:12px; white-space:nowrap;}
+  #teacherTable td{padding:10px 8px; border-bottom:1px solid var(--border); white-space:nowrap;}
+  #teacherTable tr:hover{background:#f8f9fb;}
+
   .hidden{display:none !important;}
   footer{text-align:center; color:var(--sub); font-size:12px; margin-top:30px;}
 </style>
@@ -176,7 +203,9 @@
 <div id="modeNav">
   <button id="navStudy">📖 학습하기</button>
   <button id="navTest" class="active">📝 테스트하기</button>
+  <button id="navTeacher">🧑‍🏫 교사 확인</button>
 </div>
+<div id="cloudStatus" class="cloud-status hidden"></div>
 <div class="wrap">
   <header class="top">
     <h1>📚 기초학력 마스터</h1>
@@ -213,6 +242,19 @@
         <label for="studentName">이름</label>
         <input type="text" id="studentName" placeholder="이름을 입력하세요">
       </div>
+      <div class="field">
+        <label for="studentClass">반 / 번호</label>
+        <input type="text" id="studentClass" placeholder="예: 3반 12번">
+      </div>
+      <div id="resumeBanner" class="resume-banner hidden">
+        <div class="title">📌 이어서 풀던 문제가 있어요</div>
+        <div class="desc" id="resumeDesc"></div>
+        <div class="btns">
+          <button class="btn-resume" id="resumeBtn">이어서 하기</button>
+          <button class="btn-fresh" id="freshStartBtn">새로 시작하기</button>
+        </div>
+      </div>
+      <div id="lastScoreBanner" class="last-score-banner hidden"></div>
       <div class="field">
         <label>난이도 수준 선택</label>
         <div class="level-grid" id="testLevelBoxes">
@@ -257,6 +299,25 @@
         <button class="btn-retry" id="retryBtn">🔁 다른 문제로 다시 풀기</button>
       </div>
     </section>
+  </section>
+
+  <!-- ============ 교사 확인 화면 ============ -->
+  <section id="screenTeacher" class="hidden">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
+        <div style="font-weight:800; font-size:18px;">🧑‍🏫 학생 진행 현황</div>
+        <button class="btn-ghost" id="teacherRefreshBtn">🔄 새로고침</button>
+      </div>
+      <div id="teacherStatus" style="color:var(--sub); font-size:13px; margin-bottom:12px;"></div>
+      <div style="overflow-x:auto;">
+        <table id="teacherTable">
+          <thead><tr>
+            <th>이름</th><th>반/번호</th><th>수준</th><th>현재 상태</th><th>최근 완료 점수</th><th>마지막 활동</th>
+          </tr></thead>
+          <tbody id="teacherTableBody"></tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
   <footer>© 기초학력 마스터 · 학습용 자료입니다.</footer>
@@ -315,6 +376,160 @@ function polyStr(a,b){
 
 const SUBJECT_NAME = {kor:"국어", eng:"영어", math:"수학"};
 const LEVEL_NAME = {ms:"중학교", hs1:"고1", all:"전체"};
+
+/* ===================== 클라우드 저장 (Firebase) =====================
+   진행 상황 저장·이어하기·교사 확인 기능을 쓰려면 아래 FIREBASE_CONFIG를
+   본인의 Firebase 프로젝트 설정 값으로 바꿔야 합니다. (README 참고) */
+const FIREBASE_CONFIG = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+let firebaseReady = false;
+let db = null;
+try{
+  if(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY" && typeof firebase !== 'undefined'){
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    firebaseReady = true;
+  }
+}catch(e){ console.warn('Firebase 초기화 실패:', e); firebaseReady = false; }
+
+(function showCloudStatus(){
+  const el = document.getElementById('cloudStatus');
+  if(!firebaseReady){
+    el.textContent = '⚠️ 진행 저장·이어하기·교사 확인 기능이 아직 설정되지 않았습니다 (관리자: FIREBASE_CONFIG 설정 필요). 문제 풀이 자체는 정상 이용 가능합니다.';
+    el.classList.remove('hidden');
+  }
+})();
+
+function computeStudentDocId(){
+  const name = (document.getElementById('studentName').value || '').trim();
+  const cls = (document.getElementById('studentClass').value || '').trim();
+  if(!name || !cls) return null;
+  return (cls+'_'+name).replace(/[\/\.#\$\[\]\s]+/g,'_').slice(0,150);
+}
+
+let autosaveTimer = null;
+function scheduleAutosave(){
+  if(!firebaseReady) return;
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(()=>saveProgress('in_progress'), 1200);
+}
+
+function currentQuizItemsForSave(){
+  return activeQuestions.map(({subject,index,data})=>({
+    subject, index,
+    type: data.type, q: data.q,
+    choices: data.choices || null,
+    answer: (data.answer===undefined ? null : data.answer),
+    answers: data.answers || null,
+    userAnswer: (userAnswers[subject+'-'+index] !== undefined ? userAnswers[subject+'-'+index] : null)
+  }));
+}
+
+function saveProgress(status, extra){
+  if(!firebaseReady) return;
+  const id = computeStudentDocId();
+  if(!id) return;
+  const name = document.getElementById('studentName').value.trim();
+  const classNum = document.getElementById('studentClass').value.trim();
+  const payload = {
+    name, classNum,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    current: {
+      status, level: selectedLevel, subjects: Array.from(selectedSubjects),
+      items: currentQuizItemsForSave()
+    }
+  };
+  if(extra) Object.assign(payload, extra);
+  db.collection('progress').doc(id).set(payload, {merge:true}).catch(e=>console.warn('저장 실패:', e));
+}
+
+function saveCompletion(perSubject){
+  if(!firebaseReady) return;
+  const id = computeStudentDocId();
+  if(!id) return;
+  let totalC=0, totalT=0;
+  const scores = {};
+  ['kor','eng','math'].forEach(s=>{
+    if(perSubject[s].total>0){
+      scores[s] = {c:perSubject[s].correct, t:perSubject[s].total};
+      totalC += perSubject[s].correct; totalT += perSubject[s].total;
+    }
+  });
+  const summary = {at: Date.now(), level: selectedLevel, scores, total:{c:totalC,t:totalT}};
+  saveProgress('completed', {history: firebase.firestore.FieldValue.arrayUnion(summary)});
+}
+
+let lastLoadedDoc = null;
+let resumeCheckTimer = null;
+function scheduleResumeCheck(){
+  if(!firebaseReady) return;
+  clearTimeout(resumeCheckTimer);
+  resumeCheckTimer = setTimeout(checkForSavedProgress, 600);
+}
+async function checkForSavedProgress(){
+  const id = computeStudentDocId();
+  const banner = document.getElementById('resumeBanner');
+  const scoreBanner = document.getElementById('lastScoreBanner');
+  if(!id || !firebaseReady){ banner.classList.add('hidden'); scoreBanner.classList.add('hidden'); return; }
+  try{
+    const doc = await db.collection('progress').doc(id).get();
+    if(!doc.exists){ banner.classList.add('hidden'); scoreBanner.classList.add('hidden'); lastLoadedDoc=null; return; }
+    const data = doc.data();
+    lastLoadedDoc = data;
+    const cur = data.current;
+    if(cur && cur.status==='in_progress' && cur.items && cur.items.length){
+      const answered = cur.items.filter(it=>it.userAnswer!==null && it.userAnswer!==undefined && it.userAnswer!=='').length;
+      document.getElementById('resumeDesc').textContent = `${LEVEL_NAME[cur.level]} 수준 · ${cur.items.length}문항 중 ${answered}문항 답변함`;
+      banner.classList.remove('hidden');
+      scoreBanner.classList.add('hidden');
+    } else {
+      banner.classList.add('hidden');
+      const hist = data.history || [];
+      if(hist.length){
+        const last = hist[hist.length-1];
+        const d = new Date(last.at);
+        const dateStr = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+        const parts = ['kor','eng','math'].filter(s=>last.scores[s]).map(s=>`${SUBJECT_NAME[s]} ${last.scores[s].c}/${last.scores[s].t}`);
+        scoreBanner.innerHTML = `최근 완료 기록 (${dateStr}, ${LEVEL_NAME[last.level]}): <b>${parts.join(' · ')}</b> · 총점 <b>${last.total.c}/${last.total.t}</b>`;
+        scoreBanner.classList.remove('hidden');
+      } else {
+        scoreBanner.classList.add('hidden');
+      }
+    }
+  }catch(e){ console.warn('불러오기 실패:', e); }
+}
+
+/* 이름/반번호 로컬 저장(편의용, 클라우드 여부와 무관) */
+(function restoreLastStudentInfo(){
+  try{
+    const saved = JSON.parse(localStorage.getItem('gicho_student_info')||'null');
+    if(saved){
+      if(saved.name) document.getElementById('studentName').value = saved.name;
+      if(saved.classNum) document.getElementById('studentClass').value = saved.classNum;
+    }
+  }catch(e){}
+})();
+function persistStudentInfoLocally(){
+  try{
+    localStorage.setItem('gicho_student_info', JSON.stringify({
+      name: document.getElementById('studentName').value.trim(),
+      classNum: document.getElementById('studentClass').value.trim()
+    }));
+  }catch(e){}
+}
+['studentName','studentClass'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', ()=>{
+    persistStudentInfoLocally();
+    scheduleResumeCheck();
+  });
+});
+if(document.getElementById('studentName').value && document.getElementById('studentClass').value) scheduleResumeCheck();
 
 /* ===================== 국어 데이터뱅크 (중학교) ===================== */
 const KOR_ANTONYMS = [
@@ -1126,12 +1341,65 @@ document.getElementById('navStudy').addEventListener('click', ()=>{
 document.getElementById('navTest').addEventListener('click', ()=>{
   setMode('test');
 });
+document.getElementById('navTeacher').addEventListener('click', ()=>{
+  setMode('teacher');
+  loadTeacherData();
+});
+document.getElementById('teacherRefreshBtn').addEventListener('click', loadTeacherData);
 function setMode(mode){
   document.getElementById('screenStudy').classList.toggle('hidden', mode!=='study');
   document.getElementById('screenTest').classList.toggle('hidden', mode!=='test');
+  document.getElementById('screenTeacher').classList.toggle('hidden', mode!=='teacher');
   document.getElementById('navStudy').classList.toggle('active', mode==='study');
   document.getElementById('navTest').classList.toggle('active', mode==='test');
+  document.getElementById('navTeacher').classList.toggle('active', mode==='teacher');
   window.scrollTo({top:0, behavior:'smooth'});
+}
+
+async function loadTeacherData(){
+  const statusEl = document.getElementById('teacherStatus');
+  const tbody = document.getElementById('teacherTableBody');
+  if(!firebaseReady){
+    statusEl.textContent = '클라우드 저장이 설정되지 않아 학생 데이터를 불러올 수 없습니다. (관리자: FIREBASE_CONFIG 설정 필요)';
+    tbody.innerHTML = '';
+    return;
+  }
+  statusEl.textContent = '불러오는 중...';
+  tbody.innerHTML = '';
+  try{
+    const snap = await db.collection('progress').orderBy('updatedAt','desc').limit(200).get();
+    if(snap.empty){ statusEl.textContent = '아직 응시 기록이 없습니다.'; return; }
+    statusEl.textContent = `총 ${snap.size}명의 기록 (최근 업데이트 순)`;
+    snap.forEach(doc=>{
+      const d = doc.data();
+      const cur = d.current || {};
+      const hist = d.history || [];
+      const last = hist.length ? hist[hist.length-1] : null;
+      let statusText = '기록 없음';
+      if(cur.status==='in_progress'){
+        const items = cur.items || [];
+        const answered = items.filter(it=>it.userAnswer!==null && it.userAnswer!==undefined && it.userAnswer!=='').length;
+        statusText = `진행중 (${answered}/${items.length})`;
+      } else if(cur.status==='completed'){
+        statusText = '응시 완료';
+      }
+      let scoreText = '-';
+      if(last){
+        const parts = ['kor','eng','math'].filter(s=>last.scores && last.scores[s]).map(s=>`${SUBJECT_NAME[s]} ${last.scores[s].c}/${last.scores[s].t}`);
+        scoreText = `총 ${last.total.c}/${last.total.t}` + (parts.length? ` (${parts.join(', ')})` : '');
+      }
+      let updatedText = '-';
+      if(d.updatedAt && d.updatedAt.toDate){
+        const u = d.updatedAt.toDate();
+        updatedText = `${u.getMonth()+1}/${u.getDate()} ${String(u.getHours()).padStart(2,'0')}:${String(u.getMinutes()).padStart(2,'0')}`;
+      }
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${escapeHtml(d.name||'')}</td><td>${escapeHtml(d.classNum||'')}</td><td>${LEVEL_NAME[cur.level]||'-'}</td><td>${escapeHtml(statusText)}</td><td>${escapeHtml(scoreText)}</td><td>${updatedText}</td>`;
+      tbody.appendChild(tr);
+    });
+  }catch(e){
+    statusEl.textContent = '불러오기 실패: ' + e.message;
+  }
 }
 
 /* 테스트 화면 수준 선택 */
@@ -1326,29 +1594,63 @@ document.getElementById('startBtn').addEventListener('click', ()=>{
   if(!name){ alert('이름을 입력해 주세요.'); return; }
   if(selectedSubjects.size === 0){ alert('과목을 하나 이상 선택해 주세요.'); return; }
   buildQuiz();
+  saveProgress('in_progress');
   show('screenQuiz');
 });
 
-function buildQuiz(){
+/* 이어서 하기 / 새로 시작하기 */
+document.getElementById('resumeBtn').addEventListener('click', ()=>{
+  if(!lastLoadedDoc || !lastLoadedDoc.current) return;
+  const cur = lastLoadedDoc.current;
+  selectedLevel = cur.level;
+  selectedSubjects = new Set(cur.subjects);
+  document.querySelectorAll('#testLevelBoxes .level-box').forEach(b=>b.classList.toggle('on', b.dataset.l===selectedLevel));
+  document.querySelectorAll('#screenStart .subject-box').forEach(b=>b.classList.toggle('on', selectedSubjects.has(b.dataset.s)));
+  updateSubjectCounts();
+  buildQuiz(cur.items);
+  show('screenQuiz');
+});
+document.getElementById('freshStartBtn').addEventListener('click', ()=>{
+  document.getElementById('resumeBanner').classList.add('hidden');
+});
+
+function buildQuiz(resumeItems){
   activeQuestions = [];
   userAnswers = {};
-  const order = ['kor','eng','math'].filter(s=>selectedSubjects.has(s));
   const body = document.getElementById('quizBody');
   body.innerHTML = '';
 
+  let subjectGroups = {};
+  if(resumeItems && resumeItems.length){
+    resumeItems.forEach(it=>{
+      subjectGroups[it.subject] = subjectGroups[it.subject] || [];
+      subjectGroups[it.subject].push(it);
+    });
+  } else {
+    const order = ['kor','eng','math'].filter(s=>selectedSubjects.has(s));
+    order.forEach(subject=>{
+      const src = poolByLevel(subject, selectedLevel);
+      const drawn = pick(src, Math.min(QUESTIONS_PER_SUBJECT, src.length));
+      subjectGroups[subject] = drawn.map(data=>({subject, type:data.type, q:data.q, choices:data.choices||null, answer:(data.answer===undefined?null:data.answer), answers:data.answers||null, userAnswer:null}));
+    });
+  }
+
+  const order = ['kor','eng','math'].filter(s=>subjectGroups[s] && subjectGroups[s].length);
   order.forEach(subject=>{
-    const src = poolByLevel(subject, selectedLevel);
-    const drawn = pick(src, Math.min(QUESTIONS_PER_SUBJECT, src.length));
+    const items = subjectGroups[subject];
 
     const title = document.createElement('div');
     title.className = 'section-title';
     title.dataset.s = subject;
-    title.innerHTML = `<span class="dot"></span>${SUBJECT_NAME[subject]} · ${LEVEL_NAME[selectedLevel]} (${drawn.length}문항)`;
+    title.innerHTML = `<span class="dot"></span>${SUBJECT_NAME[subject]} · ${LEVEL_NAME[selectedLevel]} (${items.length}문항)`;
     body.appendChild(title);
 
-    drawn.forEach((q, idx)=>{
+    items.forEach((it, idx)=>{
+      const q = {type: it.type, q: it.q, choices: it.choices, answer: it.answer, answers: it.answers};
       activeQuestions.push({subject, index:idx, data:q});
       const key = subject+'-'+idx;
+      if(it.userAnswer !== null && it.userAnswer !== undefined && it.userAnswer !== '') userAnswers[key] = it.userAnswer;
+
       const card = document.createElement('div');
       card.className = 'qcard';
       const qnumHtml = `<div class="qnum">${SUBJECT_NAME[subject]} ${idx+1}번</div>`;
@@ -1378,16 +1680,34 @@ function buildQuiz(){
       label.classList.add('checked');
       label.querySelector('input').checked = true;
       updateProgress();
+      scheduleAutosave();
     });
   });
   body.querySelectorAll('.short-input').forEach(input=>{
     input.addEventListener('input', ()=>{
       userAnswers[input.dataset.key] = input.value;
       updateProgress();
+      scheduleAutosave();
     });
   });
 
+  restoreAnswersUI();
   updateProgress();
+}
+
+function restoreAnswersUI(){
+  activeQuestions.forEach(({subject,index,data})=>{
+    const key = subject+'-'+index;
+    const v = userAnswers[key];
+    if(v===undefined || v===null || v==='') return;
+    if(data.type==='mc'){
+      const label = document.querySelector(`.choice[data-key="${key}"][data-ci="${v}"]`);
+      if(label){ label.classList.add('checked'); const inp=label.querySelector('input'); if(inp) inp.checked=true; }
+    } else {
+      const input = document.querySelector(`.short-input[data-key="${key}"]`);
+      if(input) input.value = v;
+    }
+  });
 }
 
 function updateProgress(){
@@ -1502,6 +1822,7 @@ function gradeAndShowResult(){
     reviewList.appendChild(item);
   });
 
+  saveCompletion(perSubject);
   show('screenResult');
   window.scrollTo({top:0, behavior:'smooth'});
 }

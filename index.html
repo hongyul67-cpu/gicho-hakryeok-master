@@ -8,7 +8,8 @@
 <script src="https://hongyul67-cpu.github.io/result-collector/collector.js"
         data-tool="기초학력 마스터"
         data-classes="1,2,3,4,5,6,7,8,9,10"
-        data-max-num="40"></script>
+        data-max-num="40"
+        data-name="1"></script>
 <style>
   :root{
     --kor:#4c6ef5; --eng:#12b886; --math:#f76707;
@@ -1673,6 +1674,14 @@ document.getElementById('submitResultBtn').addEventListener('click', ()=>{
     alert('결과 제출 위젯을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.');
     return;
   }
+  // 이미 입력한 이름을 제출 모달에 미리 채워 이중 입력을 줄인다
+  try{
+    const name = document.getElementById('studentName').value.trim();
+    if(name){
+      const last = JSON.parse(localStorage.getItem('rc_student')||'{}');
+      localStorage.setItem('rc_student', JSON.stringify(Object.assign({}, last, {name})));
+    }
+  }catch(e){}
   ResultCollector.open(lastResultSummary);
 });
 

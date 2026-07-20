@@ -1185,12 +1185,66 @@ function buildMathPoolHS1(){
 }
 
 /* ===================== 전체 문제 풀 ===================== */
-const korMs = tagLevel(buildKorPool(), 'ms');
-const korHs1 = tagLevel(buildKorPoolHS1(), 'hs1');
-const engMs = tagLevel(buildEngPool(), 'ms');
-const engHs1 = tagLevel(buildEngPoolHS1(), 'hs1');
-const mathMs = tagLevel(buildMathPool(), 'ms');
-const mathHs1 = tagLevel(buildMathPoolHS1(), 'hs1');
+/* 단답형 문항을 모두 객관식으로 자동 변환.
+   같은 "정답 모양"(정수·소수·분수·근호·좌표·인수분해식·영단어·한글낱말 등)을 가진
+   다른 문항의 정답들을 오답 보기로 뽑아 4지선다를 만든다. */
+function ansSig(s){
+  s = String(s).trim();
+  if(/^-?\d+$/.test(s)) return 'int';
+  if(/^-?\d+\.\d+$/.test(s)) return 'dec';
+  if(/^-?\d+\/\d+$/.test(s)) return 'frac';
+  if(/√/.test(s)) return 'sqrt';
+  if(/,/.test(s) && /^\(/.test(s)) return 'point';
+  if(/^\(/.test(s)) return 'fact';
+  if(/x²/.test(s)) return 'quad';
+  if(/^-?\d*x([+-]\d+)?$/.test(s)) return 'lin';  // x, -x, 5x, 5x+3 등 일차식만(영단어 "experience"의 x 오분류 방지)
+  if(/\s/.test(s)) return /[가-힣]/.test(s) ? 'korsent' : 'engsent';
+  if(/[A-Za-z]/.test(s)) return 'engword';
+  return 'korword';
+}
+function synthDistractors(correct, g, seen){
+  const out = [];
+  if(g==='int'){ const n=Number(correct); [1,-1,2,-2,3,-3,4,5,10].forEach(d=>out.push(String(n+d))); }
+  else if(g==='dec'){ const n=Number(correct); const dp=(correct.split('.')[1]||'').length; [1,-1,2,-2,3,5].forEach(d=>out.push((n+d).toFixed(dp))); }
+  else if(g==='frac'){ const p=correct.split('/').map(Number); out.push(`${p[0]+1}/${p[1]}`, `${p[0]}/${p[1]+1}`, `${Math.max(1,p[0]-1)}/${p[1]}`, `${p[1]}/${p[0]||1}`); }
+  return out.filter(x=>x!==correct && !seen.has(x));
+}
+function convertPoolToMC(pool){
+  const buckets = {};
+  pool.forEach(q=>{
+    if(q.type==='short'){
+      const a = String(q.answers[0]);
+      const g = ansSig(a);
+      (buckets[g] = buckets[g] || []).push(a);
+    }
+  });
+  return pool.map(q=>{
+    if(q.type !== 'short') return q;
+    const correct = String(q.answers[0]);
+    const g = ansSig(correct);
+    const seen = new Set([correct]);
+    const distractors = [];
+    for(const cand of shuffle(buckets[g] || [])){
+      if(!seen.has(cand)){ seen.add(cand); distractors.push(cand); }
+      if(distractors.length >= 3) break;
+    }
+    if(distractors.length < 3){
+      for(const e of synthDistractors(correct, g, seen)){
+        if(distractors.length >= 3) break;
+        seen.add(e); distractors.push(e);
+      }
+    }
+    const opts = shuffle([correct, ...distractors]);
+    return mcItem(q.q, opts, opts.indexOf(correct));
+  });
+}
+
+const korMs = tagLevel(convertPoolToMC(buildKorPool()), 'ms');
+const korHs1 = tagLevel(convertPoolToMC(buildKorPoolHS1()), 'hs1');
+const engMs = tagLevel(convertPoolToMC(buildEngPool()), 'ms');
+const engHs1 = tagLevel(convertPoolToMC(buildEngPoolHS1()), 'hs1');
+const mathMs = tagLevel(convertPoolToMC(buildMathPool()), 'ms');
+const mathHs1 = tagLevel(convertPoolToMC(buildMathPoolHS1()), 'hs1');
 
 const POOLS = {
   kor: korMs.concat(korHs1),

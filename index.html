@@ -59,7 +59,7 @@
   .subject-box[data-s=math].on{border-color:var(--math); background:#fff2e8; box-shadow:0 0 0 2px var(--math) inset;}
   .subject-box .cnt{display:block; font-weight:400; font-size:12px; color:var(--sub); margin-top:4px;}
 
-  .level-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+  .level-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(64px,1fr)); gap:8px;}
   .level-box{
     border:2px solid var(--border); border-radius:12px; padding:12px; text-align:center; cursor:pointer;
     transition:.15s; user-select:none; font-weight:700; font-size:14px; color:var(--sub);
@@ -200,7 +200,7 @@
 <div class="wrap">
   <header class="top">
     <h1>📚 기초학력 마스터</h1>
-    <p>중학교 · 고1 수준 국어 · 영어 · 수학 학습 · 진단 도구</p>
+    <p>중1~고3 수준 국어 · 영어 · 수학 학습 · 진단 도구</p>
   </header>
 
   <!-- ============ 학습 화면 ============ -->
@@ -209,8 +209,12 @@
       <div class="field">
         <label>학습 수준 선택</label>
         <div class="level-grid" id="studyLevelBoxes">
-          <div class="level-box on" data-l="ms">중학교</div>
+          <div class="level-box on" data-l="ms1">중1</div>
+          <div class="level-box" data-l="ms2">중2</div>
+          <div class="level-box" data-l="ms3">중3</div>
           <div class="level-box" data-l="hs1">고1</div>
+          <div class="level-box" data-l="hs2">고2</div>
+          <div class="level-box" data-l="hs3">고3</div>
           <div class="level-box" data-l="all">전체</div>
         </div>
       </div>
@@ -244,8 +248,12 @@
       <div class="field">
         <label>난이도 수준 선택</label>
         <div class="level-grid" id="testLevelBoxes">
-          <div class="level-box on" data-l="ms">중학교</div>
+          <div class="level-box on" data-l="ms1">중1</div>
+          <div class="level-box" data-l="ms2">중2</div>
+          <div class="level-box" data-l="ms3">중3</div>
           <div class="level-box" data-l="hs1">고1</div>
+          <div class="level-box" data-l="hs2">고2</div>
+          <div class="level-box" data-l="hs3">고3</div>
           <div class="level-box" data-l="all">전체</div>
         </div>
       </div>
@@ -343,7 +351,7 @@ function polyStr(a,b){
 }
 
 const SUBJECT_NAME = {kor:"국어", eng:"영어", math:"수학"};
-const LEVEL_NAME = {ms:"중학교", hs1:"고1", all:"전체"};
+const LEVEL_NAME = {ms1:"중1", ms2:"중2", ms3:"중3", hs1:"고1", hs2:"고2", hs3:"고3", all:"전체"};
 
 /* ===================== 진행 저장 (이 브라우저에 한해 이어하기) =====================
    교사 확인·결과 제출은 result-collector(구글시트 위젯, collector.js)가 담당한다.
@@ -1193,11 +1201,12 @@ function ansSig(s){
   if(/^-?\d+$/.test(s)) return 'int';
   if(/^-?\d+\.\d+$/.test(s)) return 'dec';
   if(/^-?\d+\/\d+$/.test(s)) return 'frac';
-  if(/√/.test(s)) return 'sqrt';
-  if(/,/.test(s) && /^\(/.test(s)) return 'point';
-  if(/^\(/.test(s)) return 'fact';
-  if(/x²/.test(s)) return 'quad';
-  if(/^-?\d*x([+-]\d+)?$/.test(s)) return 'lin';  // x, -x, 5x, 5x+3 등 일차식만(영단어 "experience"의 x 오분류 방지)
+  if(/^\(-?\d+\s*,\s*-?\d+\)$/.test(s)) return 'point';           // 좌표 (2,3)
+  if(/√/.test(s)) return 'sqrt';                                   // √3, 2√3, √3/2
+  if(/×/.test(s)) return 'prod';                                   // 소인수분해 2²×3
+  if(/^\(/.test(s)) return 'fact';                                 // 인수분해 (x+1)(x+2), (x+3)²
+  // 다항식: x 를 지운 뒤 글자가 안 남으면 수식(영단어 "experience"의 x 오분류 방지)
+  if(/x/.test(s) && !/[A-Za-z가-힣]/.test(s.replace(/x/g,''))) return 'poly';
   if(/\s/.test(s)) return /[가-힣]/.test(s) ? 'korsent' : 'engsent';
   if(/[A-Za-z]/.test(s)) return 'engword';
   return 'korword';
@@ -1239,18 +1248,275 @@ function convertPoolToMC(pool){
   });
 }
 
-const korMs = tagLevel(convertPoolToMC(buildKorPool()), 'ms');
-const korHs1 = tagLevel(convertPoolToMC(buildKorPoolHS1()), 'hs1');
-const engMs = tagLevel(convertPoolToMC(buildEngPool()), 'ms');
-const engHs1 = tagLevel(convertPoolToMC(buildEngPoolHS1()), 'hs1');
-const mathMs = tagLevel(convertPoolToMC(buildMathPool()), 'ms');
-const mathHs1 = tagLevel(convertPoolToMC(buildMathPoolHS1()), 'hs1');
+/* ===================== 학년별(중1~고3) 콘텐츠 ===================== */
+function sup(k){ return ({0:'',1:'',2:'²',3:'³',4:'⁴',5:'⁵',6:'⁶'})[k] || ('^'+k); }
 
-const POOLS = {
-  kor: korMs.concat(korHs1),
-  eng: engMs.concat(engHs1),
-  math: mathMs.concat(mathHs1)
+/* --- 국어 카테고리 → 문항 생성기(기존 데이터 재사용) --- */
+function kAntonymQ(arr){const p=[];arr.forEach(([a,b])=>{p.push(shortItem(`"${a}"의 반의어(반대말)를 쓰시오.`,[b]));p.push(shortItem(`"${b}"의 반의어(반대말)를 쓰시오.`,[a]));});return p;}
+function kSynonymQ(arr){const p=[];arr.forEach(([a,b])=>{p.push(shortItem(`"${a}"와(과) 뜻이 비슷한 낱말을 쓰시오.`,[b]));p.push(shortItem(`"${b}"와(과) 뜻이 비슷한 낱말을 쓰시오.`,[a]));});return p;}
+function kPosQ(arr){const P=["부사","명사","동사","형용사"];const p=[];arr.forEach(([w,c])=>{const o=P.filter(x=>x!==c);const ch=shuffle([c,...pick(o,3)]);p.push(mcItem(`다음 낱말 "${w}"의 품사로 알맞은 것은?`,ch,ch.indexOf(c)));});return p;}
+function kHonorQ(arr){const p=[];arr.forEach(([w,h])=>p.push(shortItem(`"${w}"의 높임말을 쓰시오.`,[h])));return p;}
+function kIdiomQ(arr){const M=arr.map(x=>x[1]);const p=[];arr.forEach(([id,me])=>{const d=pick(M.filter(m=>m!==me),3);const ch=shuffle([me,...d]);p.push(mcItem(`사자성어 "${id}"의 뜻으로 알맞은 것은?`,ch,ch.indexOf(me)));});return p;}
+function kSpellQ(arr){const W=arr.map(x=>x[1]);const p=[];arr.forEach(([c,w])=>{const o=pick(W.filter(x=>x!==w),2);const ch=shuffle([c,w,...o]);p.push(mcItem(`다음 중 맞춤법(표준어)이 올바른 것은?`,ch,ch.indexOf(c)));});return p;}
+function classifyQ(arr, prompt, allTypes){const p=[];arr.forEach(([item,correct])=>{const o=allTypes.filter(t=>t!==correct);const ch=shuffle([correct,...pick(o,Math.min(3,o.length))]);p.push(mcItem(prompt(item),ch,ch.indexOf(correct)));});return p;}
+function meaningQ(arr, prompt){const M=arr.map(x=>x[1]);const p=[];arr.forEach(([t,me])=>{const d=pick(M.filter(m=>m!==me),3);const ch=shuffle([me,...d]);p.push(mcItem(prompt(t),ch,ch.indexOf(me)));});return p;}
+
+/* --- 국어 신규 데이터(중3·고2·고3) --- */
+const KOR_PHONOLOGY = [
+  ["국물","비음화"],["밥물","비음화"],["닫는","비음화"],["종로","비음화"],["섭리","비음화"],
+  ["신라","유음화"],["난로","유음화"],["칼날","유음화"],["대관령","유음화"],["광한루","유음화"],
+  ["해돋이","구개음화"],["굳이","구개음화"],["같이","구개음화"],["맏이","구개음화"],["붙이다","구개음화"],
+  ["좋고","거센소리되기"],["국화","거센소리되기"],["넣고","거센소리되기"],["막히다","거센소리되기"],["잡히다","거센소리되기"],
+  ["국밥","된소리되기"],["학교","된소리되기"],["덮개","된소리되기"],["있고","된소리되기"],["앉다","된소리되기"]
+];
+const KOR_PHON_TYPES = ["비음화","유음화","구개음화","거센소리되기","된소리되기"];
+const KOR_SENT_STRUCT = [
+  ["나는 밥을 먹었다.","홑문장"],["하늘이 매우 푸르다.","홑문장"],["철수가 축구를 한다.","홑문장"],["꽃이 예쁘게 피었다.","홑문장"],
+  ["비가 와서 소풍이 취소되었다.","이어진문장"],["봄이 오면 꽃이 핀다.","이어진문장"],["나는 밥을 먹고 학교에 갔다.","이어진문장"],["바람이 불고 비가 내린다.","이어진문장"],
+  ["나는 그가 정직함을 안다.","안은문장"],["그는 소리도 없이 사라졌다.","안은문장"],["나는 네가 오기를 기다린다.","안은문장"],["이것은 내가 읽은 책이다.","안은문장"],["토끼는 앞발이 짧다.","안은문장"]
+];
+const KOR_SENT_TYPES = ["홑문장","이어진문장","안은문장"];
+const KOR_LIT_TERMS = [
+  ["운율","시에서 느껴지는 규칙적인 말의 가락"],["심상","시를 읽을 때 마음속에 떠오르는 감각적 인상"],["시적 화자","시 속에서 말하는 이"],
+  ["서술자","소설에서 이야기를 전달하는 사람"],["복선","앞으로 일어날 사건을 미리 암시하는 장치"],["갈등","인물의 마음속이나 인물 사이의 대립"],
+  ["반어","표현하려는 뜻과 반대로 말하는 표현법"],["역설","겉으로는 모순되지만 속에 진리를 담은 표현"],["풍자","대상을 우스꽝스럽게 비꼬아 비판함"],
+  ["상징","추상적 관념을 구체적 사물로 나타냄"],["운문","일정한 운율이 있는 글"],["산문","운율에 얽매이지 않는 줄글"],
+  ["전지적 작가 시점","서술자가 인물의 속마음까지 다 아는 시점"],["1인칭 주인공 시점","작품 속 '나'가 자기 이야기를 하는 시점"],
+  ["수미상관","시의 처음과 끝을 비슷하게 반복하는 구성"],["객관적 상관물","화자의 감정을 대신 드러내는 사물"]
+];
+const KOR_WORDFORM = [
+  ["첫사랑","합성어"],["돌다리","합성어"],["봄비","합성어"],["손발","합성어"],["밤낮","합성어"],["앞뒤","합성어"],
+  ["풋사과","파생어"],["덮개","파생어"],["지우개","파생어"],["잠꾸러기","파생어"],["맨손","파생어"],["햇과일","파생어"],
+  ["사랑","단일어"],["하늘","단일어"],["구름","단일어"],["나무","단일어"],["바다","단일어"]
+];
+const KOR_WORDFORM_TYPES = ["단일어","합성어","파생어"];
+const KOR_LIT_GENRE = [
+  ["시조","3장 6구 45자 내외의 우리 고유 정형시"],["가사","운문과 산문의 중간 형태인 조선 시대 문학"],["판소리","창과 아니리로 이야기를 노래하는 공연 예술"],
+  ["설화","입에서 입으로 전해 내려온 이야기(신화·전설·민담)"],["수필","형식에 얽매이지 않고 쓰는 산문"],["희곡","무대 상연을 목적으로 쓴 글"],
+  ["향가","신라 때 우리말로 지어진 노래"],["고려가요","고려 시대 평민들이 부르던 노래"],["민요","민중 사이에서 불려 온 노래"],["기행문","여행하며 보고 느낀 것을 쓴 글"]
+];
+const KOR3_PASSAGES = [
+  {passage:"과학은 절대적 진리를 밝히는 학문이 아니라, 관찰과 실험을 통해 잠정적으로 가장 타당한 설명을 찾아가는 과정이다. 어떤 이론도 새로운 증거 앞에서는 수정되거나 폐기될 수 있으며, 바로 이 반증 가능성이 과학을 다른 믿음 체계와 구별 짓는다.",
+   questions:[
+     {q:"이 글에서 과학을 다른 믿음 체계와 구별 짓는 특성은?", choices:["반증 가능성","절대적 진리 추구","다수의 동의","오래된 전통"], answer:0},
+     {q:"이 글의 과학관으로 알맞은 것은?", choices:["과학 이론은 수정·폐기될 수 있다","과학은 영원불변의 진리다","과학은 실험이 필요 없다","과학은 믿음의 문제다"], answer:0}
+   ]},
+  {passage:"희소성은 인간의 욕구는 무한한 데 비해 그것을 충족할 자원은 한정되어 있는 상태를 말한다. 이 희소성 때문에 우리는 늘 무엇을 먼저 선택할지 고민하게 되고, 경제 문제는 바로 이 선택의 문제에서 출발한다.",
+   questions:[
+     {q:"'희소성'의 의미로 알맞은 것은?", choices:["욕구는 무한하나 자원은 한정됨","자원이 아주 많음","욕구가 전혀 없음","물건이 비쌈"], answer:0},
+     {q:"이 글에서 경제 문제가 출발하는 지점은?", choices:["선택의 문제","생산의 중단","자원의 무한함","욕구의 소멸"], answer:0}
+   ]},
+  {passage:"추상 미술은 사물의 겉모습을 그대로 재현하는 대신, 점·선·면·색채 같은 조형 요소 자체로 작가의 내면과 정서를 표현한다. 감상자는 구체적인 형상을 찾기보다 색과 형태가 주는 느낌에 주목할 때 작품을 더 깊이 이해할 수 있다.",
+   questions:[
+     {q:"추상 미술의 특징으로 알맞은 것은?", choices:["조형 요소 자체로 내면을 표현한다","사물을 사진처럼 재현한다","글자로만 표현한다","형태가 전혀 없다"], answer:0},
+     {q:"이 글이 권하는 추상 미술 감상 태도는?", choices:["색과 형태가 주는 느낌에 주목","구체적 형상만 찾기","제목만 읽기","작가 이름만 확인"], answer:0}
+   ]},
+  {passage:"언어는 사회적 약속이다. 같은 대상을 두고 나라마다 다른 낱말로 부르는 것은 언어와 그것이 가리키는 대상 사이에 필연적 관계가 없음을 보여 준다. 이러한 언어의 자의성 때문에 한 언어의 낱말을 다른 언어로 옮길 때 완전히 대응하지 않는 경우가 생긴다.",
+   questions:[
+     {q:"'언어의 자의성'이 뜻하는 바는?", choices:["말과 대상 사이에 필연적 관계가 없음","말은 반드시 대상을 닮음","언어는 변하지 않음","모든 언어가 같음"], answer:0},
+     {q:"자의성 때문에 생기는 현상으로 알맞은 것은?", choices:["번역이 완전히 대응하지 않음","모든 언어가 통일됨","낱말이 사라짐","문법이 없어짐"], answer:0}
+   ]},
+  {passage:"사료는 과거를 알려 주는 창이지만, 그 자체로 완전한 진실은 아니다. 사료를 남긴 사람의 관점과 이해관계가 반영되기 때문이다. 따라서 역사가는 여러 사료를 교차 검토하고 그 신뢰성을 비판적으로 따져 보아야 한다.",
+   questions:[
+     {q:"이 글에서 지적하는 사료의 한계는?", choices:["남긴 사람의 관점이 반영됨","너무 오래됨","숫자가 많음","읽기 어려움"], answer:0},
+     {q:"역사가에게 요구되는 태도로 알맞은 것은?", choices:["여러 사료를 비판적으로 교차 검토","하나의 사료만 믿음","사료를 무시함","기억에만 의존함"], answer:0}
+   ]},
+  {passage:"인지 부조화란 자신의 신념과 실제 행동이 어긋날 때 느끼는 심리적 불편함을 말한다. 사람들은 이 불편을 줄이기 위해 행동을 바꾸기보다 오히려 자신의 신념을 행동에 맞게 바꾸어 정당화하는 경향이 있다.",
+   questions:[
+     {q:"'인지 부조화'의 의미로 알맞은 것은?", choices:["신념과 행동이 어긋날 때의 불편함","몸이 아픈 상태","기억이 사라지는 것","잠이 부족한 것"], answer:0},
+     {q:"사람들이 인지 부조화를 줄이는 방식으로 제시된 것은?", choices:["신념을 행동에 맞게 바꿔 정당화","항상 행동을 바꿈","불편을 그대로 둠","남을 탓함"], answer:0}
+   ]}
+];
+
+/* --- 영어 문항 생성기 --- */
+function engVocabItems(arr){const p=[];arr.forEach(([kr,en])=>p.push(shortItem(`"${kr}"를 뜻하는 영어 단어를 쓰시오.`,[en])));return p;}
+function engOppositeItems(arr){const p=[];arr.forEach(([a,b])=>{p.push(shortItem(`Write the opposite of "${a}".`,[b]));p.push(shortItem(`Write the opposite of "${b}".`,[a]));});return p;}
+function engPluralItems(arr){const p=[];arr.forEach(([s,pl])=>p.push(shortItem(`Write the plural form of "${s}".`,[pl])));return p;}
+function engPastItems(arr){const p=[];arr.forEach(([b,pa])=>p.push(shortItem(`Write the past tense of "${b}".`,[pa])));return p;}
+function engPronounItems(arr){const p=[];arr.forEach(([s,poss])=>p.push(shortItem(`인칭대명사 "${s}"의 소유격을 쓰시오. (예: I→my)`,[poss])));return p;}
+function engCompItems(arr){const p=[];arr.forEach(([b,c])=>p.push(shortItem(`형용사 "${b}"의 비교급을 쓰시오. (예: tall→taller)`,[c])));return p;}
+function engPPItems(arr){const p=[];arr.forEach(([b,pp])=>p.push(shortItem(`현재완료문 "I have ___ ." — 동사 "${b}"의 과거분사를 쓰시오.`,[pp])));return p;}
+function engModalItems(arr){return meaningQ(arr, t=>`조동사 "${t}"의 뜻으로 알맞은 것은?`);}
+function engIdiomItems(arr){return meaningQ(arr, t=>`숙어 "${t}"의 뜻으로 알맞은 것은?`);}
+function engChoiceItems(arr){const p=[];arr.forEach(([q,choices,c])=>p.push(shuffleChoices(q,choices,c)));return p;}
+function engRelItems(arr){const p=[];arr.forEach(([q,c])=>p.push(shuffleChoices(q,["who","which","whose","that"],c)));return p;}
+function engGerundItems(arr){const pool=["reading","to go","doing","to leave","making","to see","smoking","to study"];const p=[];arr.forEach(([q,c])=>{const ch=shuffle([c,...pick(pool.filter(x=>x!==c),3)]);p.push(mcItem(q,ch,ch.indexOf(c)));});return p;}
+function engBeVerbItems(){const pr=[["I","am"],["You","are"],["He","is"],["She","is"],["We","are"],["They","are"],["It","is"]];const pf=["a doctor","a teacher","a student","a nurse","an artist"];const p=[];pr.forEach(([x,c])=>pf.forEach(f=>p.push(shuffleChoices(`"${x} ___ ${f}."`,["is","are","am"],c))));return p;}
+function engArticleItems(){return [
+  shuffleChoices('"This is ___ apple."',["an","a","the","-"],"an"),
+  shuffleChoices('"That is ___ car."',["a","an","the","-"],"a"),
+  shuffleChoices('"I have ___ umbrella."',["an","a","the","-"],"an"),
+  shuffleChoices('"She is ___ honest girl."',["an","a","the","-"],"an"),
+  shuffleChoices('"He is ___ nice boy."',["a","an","the","-"],"a"),
+  shuffleChoices('"It is ___ old book."',["an","a","the","-"],"an")
+];}
+function engPrepItems(){return [
+  shuffleChoices('"The cat is ___ the box."',["in","on","at","under"],"in"),
+  shuffleChoices('"The book is ___ the desk."',["on","in","at","of"],"on"),
+  shuffleChoices('"We meet ___ Monday."',["on","in","at","to"],"on"),
+  shuffleChoices('"She was born ___ 2012."',["in","on","at","to"],"in"),
+  shuffleChoices('"Class starts ___ 9 o\'clock."',["at","on","in","to"],"at"),
+  shuffleChoices('"The ball rolled ___ the table."',["under","in","on","of"],"under")
+];}
+
+/* --- 영어 신규 데이터 --- */
+const ENG_PRONOUN = [["I","my"],["you","your"],["he","his"],["she","her"],["we","our"],["they","their"],["it","its"]];
+const ENG_MODALS = [["can","~할 수 있다"],["must","~해야 한다"],["may","~해도 된다"],["should","~하는 게 좋다"],["will","~할 것이다"],["might","~일지도 모른다"]];
+const ENG_MS2_COMP = [["tall","taller"],["big","bigger"],["fast","faster"],["happy","happier"],["good","better"],["bad","worse"],["hot","hotter"],["nice","nicer"],["large","larger"],["easy","easier"],["heavy","heavier"],["small","smaller"]];
+const ENG_PRESENT_PERFECT = [["go","gone"],["eat","eaten"],["see","seen"],["do","done"],["write","written"],["take","taken"],["give","given"],["know","known"],["break","broken"],["speak","spoken"],["come","come"],["run","run"],["make","made"],["find","found"],["meet","met"]];
+const ENG_HS2_SUBJUNCTIVE = [
+  ['"If I ___ a bird, I would fly."', ["were","am","was","be"], "were"],
+  ['"If he ___ harder, he would pass."', ["studied","studies","study","will study"], "studied"],
+  ['"I wish I ___ taller."', ["were","am","was","be"], "were"],
+  ['"If it ___ rained, we would have stayed."', ["had","has","have","having"], "had"],
+  ['"If I ___ you, I would apologize."', ["were","am","was","be"], "were"],
+  ['"She talks as if she ___ everything."', ["knew","knows","know","known"], "knew"]
+];
+const ENG_HS2_PARTICIPLE = [
+  ['"___ tired, he went to bed early."', ["Being","Been","To be","Be"], "Being"],
+  ['"___ his homework, he went out to play."', ["Having finished","Finish","Finished to","To finish"], "Having finished"],
+  ['"The girl ___ over there is my sister."', ["standing","stood","stand","to stand"], "standing"],
+  ['"___ by everyone, she felt happy."', ["Loved","Loving","Love","To love"], "Loved"],
+  ['"He sat on the sofa, ___ a book."', ["reading","read","to read","reads"], "reading"]
+];
+const ENG_HS2_INVERSION = [
+  ['"Never ___ I seen such a thing."', ["have","has","had","having"], "have"],
+  ['"Not only ___ he smart, but also kind."', ["is","are","be","being"], "is"],
+  ['"Little ___ he know the truth."', ["did","do","does","done"], "did"],
+  ['"Hardly ___ she arrived when it began to rain."', ["had","has","have","having"], "had"]
+];
+const ENG3_VOCAB = [
+  ["분석하다","analyze"],["추측하다","assume"],["기여하다","contribute"],["증명하다","prove"],["강조하다","emphasize"],
+  ["유지하다","maintain"],["감소하다","decrease"],["증가하다","increase"],["예측하다","predict"],["구별하다","distinguish"],
+  ["의존하다","depend"],["제안하다","suggest"],["요구하다","require"],["포함하다","include"],["제외하다","exclude"],
+  ["설득하다","persuade"],["비교하다","compare"],["평가하다","evaluate"],["극복하다","overcome"],["나타내다","represent"]
+];
+const ENG3_VOCAB2 = [
+  ["애매한","ambiguous"],["필수적인","essential"],["명백한","obvious"],["복잡한","complex"],["구체적인","concrete"],
+  ["추상적인","abstract"],["일관된","consistent"],["효율적인","efficient"],["적절한","appropriate"],["중요한","significant"],
+  ["잠재적인","potential"],["상당한","considerable"],["다양한","diverse"],["명확한","explicit"],["엄격한","strict"],
+  ["유연한","flexible"],["정확한","precise"],["관련된","relevant"],["충분한","sufficient"],["드문","rare"]
+];
+const ENG3_USAGE = [
+  ['"The number of students ___ increasing."', ["is","are","were","have"], "is"],
+  ['"Each of the boys ___ a bag."', ["has","have","having","are"], "has"],
+  ['"He is one of the students who ___ hard."', ["study","studies","studying","to study"], "study"],
+  ['"It is important that he ___ present."', ["be","is","was","being"], "be"],
+  ['"Neither of them ___ correct."', ["is","are","were","have"], "is"],
+  ['"I had my car ___ yesterday."', ["repaired","repair","repairing","to repair"], "repaired"],
+  ['"The news ___ surprising."', ["was","were","have","are"], "was"],
+  ['"Not until midnight ___ he arrive."', ["did","do","does","done"], "did"]
+];
+
+/* --- 수학 학년별 생성기 --- */
+function buildMath_ms1(){
+  const p=[];
+  for(let a=-9;a<=-1;a++)for(let b=1;b<=9;b++) p.push(shortItem(`(${a}) + ${b} = ?`,[String(a+b)]));
+  for(let a=1;a<=9;a++)for(let b=2;b<=12;b++) p.push(shortItem(`${a} - ${b} = ?`,[String(a-b)]));
+  for(let a=-9;a<=-1;a++)for(let b=2;b<=9;b++) p.push(shortItem(`(${a}) × ${b} = ?`,[String(a*b)]));
+  for(let n=-15;n<=15;n++){ if(n===0) continue; p.push(shortItem(`|${n}| = ? (절댓값)`,[String(Math.abs(n))])); }
+  for(let n=2;n<=12;n++){ p.push(shortItem(`${n}² = ?`,[String(n*n)])); p.push(shortItem(`${n}³ = ?`,[String(n*n*n)])); }
+  for(let a=2;a<=6;a++)for(let b=1;b<=6;b++) p.push(shortItem(`${a}x + ${b}x = ? (예: 5x)`,[`${a+b}x`]));
+  for(let a=2;a<=6;a++)for(let b=1;b<=6;b++) p.push(shortItem(`${a}(x + ${b})를 전개하시오. (예: 2x+6)`,[`${a}x+${a*b}`]));
+  for(let a=1;a<=20;a++){ const x=2+(a%15); p.push(shortItem(`x + ${a} = ${a+x} 일 때, x = ?`,[String(x)])); }
+  for(let a=2;a<=9;a++)for(let x=2;x<=9;x++) p.push(shortItem(`${a}x = ${a*x} 일 때, x = ?`,[String(x)]));
+  [[12,"2²×3"],[18,"2×3²"],[20,"2²×5"],[24,"2³×3"],[36,"2²×3²"],[45,"3²×5"],[50,"2×5²"],[48,"2⁴×3"],[60,"2²×3×5"],[72,"2³×3²"],[8,"2³"],[27,"3³"],[16,"2⁴"],[63,"3²×7"],[100,"2²×5²"]].forEach(([n,f])=>p.push(shortItem(`${n}을 소인수분해하면? (예: 2²×3)`,[f])));
+  [[12,18],[8,12],[15,20],[24,36],[9,15],[16,24],[10,25],[20,30]].forEach(([a,b])=>{p.push(shortItem(`${a}와 ${b}의 최대공약수는?`,[String(gcd(a,b))]));p.push(shortItem(`${a}와 ${b}의 최소공배수는?`,[String(lcm(a,b))]));});
+  return p;
+}
+function buildMath_ms2(){
+  const p=[];
+  [2,3,5].forEach(base=>{for(let m=2;m<=5;m++)for(let n=1;n<=4;n++) p.push(shortItem(`${base}^${m} × ${base}^${n} = ? (계산값)`,[String(Math.pow(base,m+n))]));});
+  for(let a=2;a<=6;a++)for(let b=2;b<=6;b++) p.push(shortItem(`${a}x × ${b}x = ? (예: 6x²)`,[`${a*b}x²`]));
+  for(let a=2;a<=5;a++)for(let b=2;b<=5;b++) p.push(shortItem(`${a}x² × ${b}x = ? (예: 6x³)`,[`${a*b}x³`]));
+  for(let a=2;a<=6;a++)for(let b=1;b<=8;b++){ const x0=2+(b%7); const c=a*x0; p.push(shuffleChoices(`부등식 ${a}x > ${c}의 해는?`,[`x>${x0}`,`x<${x0}`,`x≥${x0}`,`x>${x0+1}`],`x>${x0}`)); }
+  for(let a=1;a<=6;a++)for(let b=-4;b<=5;b++){ const t=`y = ${a}x ${b>=0?'+ '+b:'- '+(-b)}`; p.push(shortItem(`일차함수 ${t} 에서 기울기는?`,[String(a)])); p.push(shortItem(`일차함수 ${t} 에서 y절편은?`,[String(b)])); }
+  [["0.3","1/3"],["0.6","2/3"],["0.1","1/9"],["0.2","2/9"],["0.4","4/9"],["0.5","5/9"],["0.7","7/9"],["0.8","8/9"]].forEach(([d,f])=>p.push(shortItem(`순환소수 0.${d.slice(2)}̇ (${d.slice(2)}이 반복)을 분수로 나타내면?`,[f])));
+  for(let x=1;x<=6;x++)for(let y=1;y<=6;y++){ const s=x+y, dd=x-y; if(dd<0) continue; p.push(shortItem(`x+y=${s}, x-y=${dd} 일 때 x = ?`,[String(x)])); }
+  return p;
+}
+function buildMath_ms3(){
+  const p=[];
+  for(let n=1;n<=20;n++) p.push(shortItem(`√${n*n} = ? (제곱근)`,[String(n)]));
+  [[8,2,2],[12,2,3],[18,3,2],[20,2,5],[24,2,6],[27,3,3],[28,2,7],[32,4,2],[45,3,5],[48,4,3],[50,5,2],[72,6,2],[75,5,3],[80,4,5],[98,7,2]].forEach(([n,k,m])=>p.push(shortItem(`√${n}을 간단히 하시오. (예: 2√3)`,[`${k}√${m}`])));
+  [["√2","무리수"],["√3","무리수"],["√4","유리수"],["√5","무리수"],["√9","유리수"],["√16","유리수"],["√7","무리수"],["√25","유리수"],["√10","무리수"],["√36","유리수"]].forEach(([v,t])=>p.push(shuffleChoices(`${v} 은(는) 유리수인가 무리수인가?`,["유리수","무리수"],t)));
+  for(let a=1;a<=9;a++)for(let b=a+1;b<=9;b++) p.push(shortItem(`x² + ${a+b}x + ${a*b}를 인수분해하시오. (예: (x+1)(x+2))`,[`(x+${a})(x+${b})`]));
+  for(let a=1;a<=9;a++)for(let b=a+1;b<=9;b++){ p.push(shortItem(`x² - ${a+b}x + ${a*b} = 0의 두 근의 합은?`,[String(a+b)])); p.push(shortItem(`x² - ${a+b}x + ${a*b} = 0의 두 근의 곱은?`,[String(a*b)])); }
+  for(let pp=-4;pp<=4;pp++){ if(pp===0) continue; for(let q=-3;q<=4;q++) p.push(shortItem(`이차함수 y = (x ${pp>=0?'- '+pp:'+ '+(-pp)})² ${q>=0?'+ '+q:'- '+(-q)}의 꼭짓점 좌표는? (예: (1,2))`,[`(${pp},${q})`])); }
+  [["sin 30°","1/2"],["cos 60°","1/2"],["sin 90°","1"],["cos 0°","1"],["tan 45°","1"],["sin 0°","0"],["cos 90°","0"],["sin 60°","√3/2"],["cos 30°","√3/2"],["sin 45°","√2/2"],["cos 45°","√2/2"]].forEach(([q,a])=>p.push(shortItem(`${q}의 값은? (예: 1/2)`,[a])));
+  [[3,4,5],[6,8,10],[5,12,13],[8,15,17],[9,12,15],[7,24,25],[12,16,20],[20,21,29]].forEach(([a,b,c])=>p.push(shortItem(`직각삼각형에서 두 변이 ${a}, ${b}일 때 빗변의 길이는?`,[String(c)])));
+  return p;
+}
+function buildMath_hs2(){
+  const p=[];
+  [2,3,5].forEach(b=>{for(let n=1;n<=6;n++) p.push(shortItem(`${b}^${n} = ? (계산값)`,[String(Math.pow(b,n))]));});
+  [[2,8,3],[2,16,4],[2,32,5],[3,9,2],[3,27,3],[5,25,2],[5,125,3],[10,100,2],[10,1000,3],[2,4,2],[3,81,4],[2,64,6],[7,49,2],[4,16,2],[6,36,2]].forEach(([b,n,v])=>p.push(shortItem(`log_${b} ${n} = ? (로그값)`,[String(v)])));
+  for(let a1=1;a1<=6;a1++)for(let d=2;d<=5;d++) p.push(shortItem(`첫째항 ${a1}, 공차 ${d}인 등차수열의 제5항은?`,[String(a1+4*d)]));
+  for(let a1=1;a1<=5;a1++)for(let d=1;d<=4;d++){ const an=a1+9*d; p.push(shortItem(`첫째항 ${a1}, 공차 ${d}인 등차수열의 첫 10항의 합은?`,[String(10*(a1+an)/2)])); }
+  for(let a1=1;a1<=4;a1++)for(let r=2;r<=4;r++) p.push(shortItem(`첫째항 ${a1}, 공비 ${r}인 등비수열의 제4항은?`,[String(a1*Math.pow(r,3))]));
+  [["sin 30°","1/2"],["cos 60°","1/2"],["tan 45°","1"],["sin 60°","√3/2"],["cos 30°","√3/2"],["sin 45°","√2/2"],["tan 60°","√3"],["cos 45°","√2/2"]].forEach(([q,a])=>p.push(shortItem(`${q}의 값은?`,[a])));
+  for(let n=2;n<=6;n++) p.push(shortItem(`f(x) = x${sup(n)}의 도함수 f'(x)는? (예: 3x²)`,[`${n}x${sup(n-1)}`]));
+  for(let a=2;a<=6;a++)for(let n=2;n<=4;n++) p.push(shortItem(`f(x) = ${a}x${sup(n)}의 도함수 f'(x)는? (예: 6x²)`,[`${a*n}x${sup(n-1)}`]));
+  return p;
+}
+function buildMath_hs3(){
+  const p=[];
+  for(let a=1;a<=5;a++)for(let b=1;b<=6;b++)for(const c of [1,2,3]) p.push(shortItem(`lim(x→${c}) (x² + ${a}x + ${b})의 값은?`,[String(c*c+a*c+b)]));
+  for(let a=1;a<=8;a++){ p.push(shortItem(`f(x)=x²일 때 x=${a}에서의 미분계수 f'(${a})는?`,[String(2*a)])); p.push(shortItem(`f(x)=x³일 때 미분계수 f'(${a})는?`,[String(3*a*a)])); }
+  [2,4,6,8,10].forEach(a=>p.push(shortItem(`∫(0→${a}) x dx 의 값은?`,[String(a*a/2)])));
+  [3,6,9].forEach(a=>p.push(shortItem(`∫(0→${a}) x² dx 의 값은?`,[String(a*a*a/3)])));
+  for(let k=2;k<=6;k++)for(let a=2;a<=6;a++) p.push(shortItem(`∫(0→${a}) ${k} dx 의 값은?`,[String(k*a)]));
+  for(let n=3;n<=8;n++)for(let r=1;r<=Math.min(n,4);r++) p.push(shortItem(`${n}C${r} = ? (조합)`,[String(factorial(n)/(factorial(r)*factorial(n-r)))]));
+  for(let n=2;n<=6;n++)for(let r=0;r<=n;r++) p.push(shortItem(`(a+b)^${n} 전개에서 a${sup(n-r)}b${sup(r)}의 계수는?`,[String(factorial(n)/(factorial(r)*factorial(n-r)))]));
+  [[[2,4,6],4],[[1,2,3,4,5],3],[[10,20,30],20],[[5,15],10],[[2,4,6,8],5]].forEach(([arr,m])=>p.push(shortItem(`자료 ${arr.join(', ')}의 평균은?`,[String(m)])));
+  return p;
+}
+
+/* --- 학년별 과목 풀 조립 --- */
+function poolKor_ms1(){ return [...kAntonymQ(KOR_ANTONYMS), ...kPosQ(KOR_POS), ...kSynonymQ(KOR_SYNONYMS), ...readingItems(KOR_PASSAGES.slice(0,10))]; }
+function poolKor_ms2(){ return [...kHonorQ(KOR_HONORIFIC), ...kIdiomQ(KOR_IDIOMS), ...kSpellQ(KOR_SPELLING), ...readingItems(KOR_PASSAGES.slice(10))]; }
+function poolKor_ms3(){ return [
+  ...classifyQ(KOR_PHONOLOGY, w=>`다음 단어에 일어나는 음운 변동은? — "${w}"`, KOR_PHON_TYPES),
+  ...classifyQ(KOR_SENT_STRUCT, w=>`다음 문장의 짜임으로 알맞은 것은? — "${w}"`, KOR_SENT_TYPES),
+  ...kAntonymQ(KOR2_HANJA),
+  ...classifyQ(KOR2_PIDONG_SADONG, w=>`다음 문장은 피동 표현인가, 사동 표현인가? — "${w}"`, ["피동","사동"]),
+  ...readingItems(KOR2_PASSAGES.slice(0,7))
+]; }
+function poolKor_hs1(){ return buildKorPoolHS1(); }
+function poolKor_hs2(){ return [
+  ...meaningQ(KOR_LIT_TERMS, t=>`문학 용어 "${t}"의 뜻으로 알맞은 것은?`),
+  ...classifyQ(KOR_WORDFORM, w=>`"${w}"의 단어 짜임으로 알맞은 것은?`, KOR_WORDFORM_TYPES),
+  ...classifyQ(KOR2_RHETORIC, w=>`다음 표현에 쓰인 표현법(수사법)은? — "${w}"`, KOR2_RHETORIC_CHOICES),
+  ...readingItems(KOR3_PASSAGES)
+]; }
+function poolKor_hs3(){ return [
+  ...meaningQ(KOR_LIT_GENRE, t=>`문학 갈래 "${t}"에 대한 설명으로 알맞은 것은?`),
+  ...kIdiomQ(KOR2_IDIOMS2),
+  ...meaningQ(KOR_LIT_TERMS, t=>`문학 용어 "${t}"의 뜻은?`),
+  ...classifyQ(KOR_WORDFORM, w=>`"${w}"의 단어 형성 방법은?`, KOR_WORDFORM_TYPES),
+  ...readingItems(KOR2_PASSAGES.slice(7)),
+  ...readingItems(KOR3_PASSAGES)
+]; }
+
+function poolEng_ms1(){ return [...engVocabItems(ENG_VOCAB.slice(0,30)), ...engPluralItems(ENG_PLURALS), ...engBeVerbItems(), ...engArticleItems(), ...engPronounItems(ENG_PRONOUN)]; }
+function poolEng_ms2(){ return [...engVocabItems(ENG_VOCAB.slice(30)), ...engPastItems(ENG_PASTTENSE), ...engOppositeItems(ENG_OPPOSITES), ...engCompItems(ENG_MS2_COMP), ...engModalItems(ENG_MODALS), ...engPrepItems()]; }
+function poolEng_ms3(){ return [...engPPItems(ENG_PRESENT_PERFECT), ...engRelItems(ENG2_RELATIVE), ...engChoiceItems(ENG2_CONJUNCTION), ...engGerundItems(ENG2_GERUND_INF), ...engVocabItems(ENG2_VOCAB.slice(0,20))]; }
+function poolEng_hs1(){ return buildEngPoolHS1(); }
+function poolEng_hs2(){ return [...engChoiceItems(ENG_HS2_SUBJUNCTIVE), ...engChoiceItems(ENG_HS2_PARTICIPLE), ...engChoiceItems(ENG_HS2_INVERSION), ...engVocabItems(ENG3_VOCAB)]; }
+function poolEng_hs3(){ return [...engVocabItems(ENG3_VOCAB2), ...engChoiceItems(ENG3_USAGE), ...engIdiomItems(ENG2_IDIOMS), ...engVocabItems(ENG3_VOCAB)]; }
+
+const GRADE_BUILDERS = {
+  kor: {ms1:poolKor_ms1, ms2:poolKor_ms2, ms3:poolKor_ms3, hs1:poolKor_hs1, hs2:poolKor_hs2, hs3:poolKor_hs3},
+  eng: {ms1:poolEng_ms1, ms2:poolEng_ms2, ms3:poolEng_ms3, hs1:poolEng_hs1, hs2:poolEng_hs2, hs3:poolEng_hs3},
+  math:{ms1:buildMath_ms1, ms2:buildMath_ms2, ms3:buildMath_ms3, hs1:buildMathPoolHS1, hs2:buildMath_hs2, hs3:buildMath_hs3}
 };
+const GRADE_LEVELS = ['ms1','ms2','ms3','hs1','hs2','hs3'];
+const POOLS = {kor:[], eng:[], math:[]};
+GRADE_LEVELS.forEach(lv=>{
+  ['kor','eng','math'].forEach(sub=>{
+    POOLS[sub] = POOLS[sub].concat(tagLevel(convertPoolToMC(GRADE_BUILDERS[sub][lv]()), lv));
+  });
+});
 const QUESTIONS_PER_SUBJECT = 20;
 
 function poolByLevel(subject, level){
@@ -1259,7 +1525,7 @@ function poolByLevel(subject, level){
 }
 
 /* 문항 수 표시 */
-let selectedLevel = 'ms';
+let selectedLevel = 'ms1';
 function updateSubjectCounts(){
   Object.keys(SUBJECT_NAME).forEach(s=>{
     const el = document.getElementById('cnt-'+s);
@@ -1295,33 +1561,58 @@ document.querySelectorAll('#testLevelBoxes .level-box').forEach(box=>{
 /* ===================== 학습 화면 ===================== */
 const STUDY_CATEGORIES = {
   kor: [
-    {key:'antonym', label:'반의어', data:KOR_ANTONYMS, level:'ms'},
-    {key:'synonym', label:'유의어', data:KOR_SYNONYMS, level:'ms'},
-    {key:'honorific', label:'높임말', data:KOR_HONORIFIC, level:'ms'},
-    {key:'idiom', label:'사자성어', data:KOR_IDIOMS, level:'ms'},
-    {key:'spelling', label:'맞춤법', data:KOR_SPELLING, level:'ms'},
-    {key:'pos', label:'품사', data:KOR_POS, level:'ms'},
+    {key:'antonym', label:'반의어', data:KOR_ANTONYMS, level:'ms1'},
+    {key:'synonym', label:'유의어', data:KOR_SYNONYMS, level:'ms1'},
+    {key:'pos', label:'품사', data:KOR_POS, level:'ms1'},
+    {key:'reading1', label:'문해력', data:readingPairs(KOR_PASSAGES.slice(0,10)), level:'ms1'},
+    {key:'honorific', label:'높임말', data:KOR_HONORIFIC, level:'ms2'},
+    {key:'idiom', label:'사자성어', data:KOR_IDIOMS, level:'ms2'},
+    {key:'spelling', label:'맞춤법', data:KOR_SPELLING, level:'ms2'},
+    {key:'reading2', label:'문해력', data:readingPairs(KOR_PASSAGES.slice(10)), level:'ms2'},
+    {key:'phon', label:'음운 변동', data:KOR_PHONOLOGY, level:'ms3'},
+    {key:'sentstruct', label:'문장의 짜임', data:KOR_SENT_STRUCT, level:'ms3'},
+    {key:'hanja3', label:'한자어 반의어', data:KOR2_HANJA, level:'ms3'},
+    {key:'pidong3', label:'피동·사동', data:KOR2_PIDONG_SADONG, level:'ms3'},
+    {key:'reading3', label:'문해력', data:readingPairs(KOR2_PASSAGES.slice(0,7)), level:'ms3'},
     {key:'sentcomp', label:'문장 성분', data:KOR2_SENT.map(([s,w,c])=>[`${s} (밑줄: ${w})`, c]), level:'hs1'},
     {key:'honortype', label:'높임법 종류', data:KOR2_HONOR_TYPE, level:'hs1'},
-    {key:'pidongsadong', label:'피동·사동', data:KOR2_PIDONG_SADONG, level:'hs1'},
     {key:'rhetoric', label:'표현법', data:KOR2_RHETORIC, level:'hs1'},
-    {key:'hanja', label:'한자어 반의어', data:KOR2_HANJA, level:'hs1'},
     {key:'idiom2', label:'사자성어(심화)', data:KOR2_IDIOMS2, level:'hs1'},
-    {key:'reading', label:'문해력', data:readingPairs(KOR_PASSAGES), level:'ms'},
-    {key:'reading2', label:'문해력(심화)', data:readingPairs(KOR2_PASSAGES), level:'hs1'}
+    {key:'readingH1', label:'문해력(심화)', data:readingPairs(KOR2_PASSAGES), level:'hs1'},
+    {key:'litterm2', label:'문학 개념', data:KOR_LIT_TERMS, level:'hs2'},
+    {key:'wordform2', label:'단어 형성', data:KOR_WORDFORM, level:'hs2'},
+    {key:'rhetoric2', label:'표현법', data:KOR2_RHETORIC, level:'hs2'},
+    {key:'reading_h2', label:'비문학 독해', data:readingPairs(KOR3_PASSAGES), level:'hs2'},
+    {key:'genre3', label:'문학 갈래', data:KOR_LIT_GENRE, level:'hs3'},
+    {key:'litterm3', label:'문학 개념', data:KOR_LIT_TERMS, level:'hs3'},
+    {key:'idiom3', label:'사자성어', data:KOR2_IDIOMS2, level:'hs3'},
+    {key:'reading_h3', label:'독서', data:readingPairs(KOR2_PASSAGES.slice(7)), level:'hs3'}
   ],
   eng: [
-    {key:'vocab', label:'단어', data:ENG_VOCAB, level:'ms'},
-    {key:'opposite', label:'반의어', data:ENG_OPPOSITES, level:'ms'},
-    {key:'plural', label:'복수형', data:ENG_PLURALS, level:'ms'},
-    {key:'past', label:'과거형', data:ENG_PASTTENSE, level:'ms'},
-    {key:'vocab2', label:'단어(고1)', data:ENG2_VOCAB, level:'hs1'},
-    {key:'idiom2', label:'숙어', data:ENG2_IDIOMS, level:'hs1'},
-    {key:'passive', label:'수동태', data:ENG2_PASSIVE, level:'hs1'}
+    {key:'vocab1', label:'단어', data:ENG_VOCAB.slice(0,30), level:'ms1'},
+    {key:'plural', label:'복수형', data:ENG_PLURALS, level:'ms1'},
+    {key:'pronoun', label:'소유격', data:ENG_PRONOUN, level:'ms1'},
+    {key:'vocab2m', label:'단어', data:ENG_VOCAB.slice(30), level:'ms2'},
+    {key:'past', label:'과거형', data:ENG_PASTTENSE, level:'ms2'},
+    {key:'opposite', label:'반의어', data:ENG_OPPOSITES, level:'ms2'},
+    {key:'comp', label:'비교급', data:ENG_MS2_COMP, level:'ms2'},
+    {key:'modal', label:'조동사', data:ENG_MODALS, level:'ms2'},
+    {key:'pp', label:'과거분사', data:ENG_PRESENT_PERFECT, level:'ms3'},
+    {key:'vocab3m', label:'단어', data:ENG2_VOCAB.slice(0,20), level:'ms3'},
+    {key:'vocabH1', label:'단어(고1)', data:ENG2_VOCAB, level:'hs1'},
+    {key:'idiomH1', label:'숙어', data:ENG2_IDIOMS, level:'hs1'},
+    {key:'passiveH1', label:'수동태', data:ENG2_PASSIVE, level:'hs1'},
+    {key:'vocabH2', label:'고급 단어', data:ENG3_VOCAB, level:'hs2'},
+    {key:'vocabH3', label:'수능 단어', data:ENG3_VOCAB2, level:'hs3'},
+    {key:'idiomH3', label:'숙어', data:ENG2_IDIOMS, level:'hs3'}
   ],
   math: [
-    {key:'formula', label:'공식노트', data:null, level:'ms'},
-    {key:'formula2', label:'공식노트(고1)', data:null, level:'hs1'}
+    {key:'formula_ms1', label:'공식노트', data:null, level:'ms1'},
+    {key:'formula_ms2', label:'공식노트', data:null, level:'ms2'},
+    {key:'formula_ms3', label:'공식노트', data:null, level:'ms3'},
+    {key:'formula_hs1', label:'공식노트', data:null, level:'hs1'},
+    {key:'formula_hs2', label:'공식노트', data:null, level:'hs2'},
+    {key:'formula_hs3', label:'공식노트', data:null, level:'hs3'}
   ]
 };
 const MATH_FORMULAS = [
@@ -1354,10 +1645,54 @@ const MATH_FORMULAS_HS1 = [
   {title:"나머지정리", body:"다항식 P(x)를 (x-a)로 나눈 나머지는 P(a)와 같다.", ex:"예) P(x)=x²+3x+2, P(1)=1+3+2=6"},
   {title:"절댓값 방정식", body:"|x-a|=b (b≥0)의 해는 x=a+b 또는 x=a-b", ex:"예) |x-3|=5 → x=8 또는 x=-2"}
 ];
+/* 학년별 공식노트 */
+const MATH_FORMULA_SETS = {
+  formula_ms1: [
+    {title:"정수의 사칙연산", body:"부호가 다르면 절댓값의 차, 같으면 절댓값의 합에 공통 부호.", ex:"예) (-5)+3 = -2, (-4)×3 = -12"},
+    {title:"절댓값", body:"수직선에서 0까지의 거리. 항상 0 이상.", ex:"예) |-7| = 7, |5| = 5"},
+    {title:"거듭제곱", body:"같은 수를 여러 번 곱하는 것.", ex:"예) 2³ = 2×2×2 = 8"},
+    {title:"일차식 정리", body:"같은 문자끼리(동류항) 계수를 더한다.", ex:"예) 3x + 2x = 5x"},
+    {title:"분배법칙", body:"a(b+c) = ab + ac", ex:"예) 2(x+3) = 2x+6"},
+    {title:"일차방정식", body:"이항하여 x만 남긴다(옮기면 부호 반대).", ex:"예) x+5=12 → x=7"},
+    {title:"소인수분해", body:"자연수를 소수들의 곱으로 나타냄.", ex:"예) 12 = 2²×3"}
+  ],
+  formula_ms2: [
+    {title:"지수법칙", body:"aᵐ×aⁿ = a^(m+n)", ex:"예) 2³×2² = 2⁵ = 32"},
+    {title:"단항식의 곱셈", body:"계수는 계수끼리, 문자는 지수를 더한다.", ex:"예) 2x × 3x = 6x²"},
+    {title:"일차부등식", body:"양변을 음수로 나누면 부등호 방향이 바뀐다.", ex:"예) 2x > 6 → x > 3"},
+    {title:"일차함수 y=ax+b", body:"a는 기울기, b는 y절편.", ex:"예) y=2x+3 → 기울기 2, y절편 3"},
+    {title:"순환소수→분수", body:"순환마디를 이용해 분수로 고친다.", ex:"예) 0.3̇ = 1/3"},
+    {title:"연립방정식", body:"두 식을 더하거나 빼서 문자를 하나 없앤다.", ex:"예) x+y=5, x-y=1 → x=3, y=2"}
+  ],
+  formula_ms3: [
+    {title:"제곱근", body:"제곱하여 a가 되는 수. √(a²)=a (a≥0)", ex:"예) √16 = 4"},
+    {title:"근호 간단히", body:"√(a²b) = a√b", ex:"예) √8 = √(4×2) = 2√2"},
+    {title:"인수분해", body:"x²+(a+b)x+ab = (x+a)(x+b)", ex:"예) x²+5x+6 = (x+2)(x+3)"},
+    {title:"이차방정식 근과 계수", body:"x²-(합)x+(곱)=0 꼴에서 합·곱을 바로 읽는다.", ex:"예) x²-5x+6=0 → 두 근 합 5, 곱 6"},
+    {title:"이차함수 꼭짓점", body:"y=(x-p)²+q 의 꼭짓점은 (p, q)", ex:"예) y=(x-1)²+2 → 꼭짓점 (1,2)"},
+    {title:"삼각비(특수각)", body:"sin30°=1/2, cos30°=√3/2, tan45°=1", ex:"예) sin60° = √3/2"},
+    {title:"피타고라스 정리", body:"직각삼각형에서 빗변² = 밑변² + 높이²", ex:"예) 3,4 → 빗변 5"}
+  ],
+  formula_hs1: MATH_FORMULAS_HS1,
+  formula_hs2: [
+    {title:"지수와 로그", body:"a^x = N ⇔ log_a N = x", ex:"예) 2³=8 ⇔ log₂8 = 3"},
+    {title:"등차수열", body:"일반항 aₙ = a₁+(n-1)d, 합 Sₙ = n(a₁+aₙ)/2", ex:"예) 1,3,5,… 제5항 = 9"},
+    {title:"등비수열", body:"일반항 aₙ = a₁·r^(n-1)", ex:"예) 2,6,18,… 제4항 = 54"},
+    {title:"삼각함수(특수각)", body:"sin30°=1/2, cos60°=1/2, tan60°=√3", ex:"예) tan60° = √3"},
+    {title:"다항함수 미분", body:"(xⁿ)' = n·xⁿ⁻¹", ex:"예) f(x)=x³ → f'(x)=3x²"}
+  ],
+  formula_hs3: [
+    {title:"함수의 극한", body:"연속함수는 x→a에서 극한값 = f(a).", ex:"예) lim(x→2)(x²+1) = 5"},
+    {title:"미분계수", body:"f'(a)는 x=a에서의 순간변화율(접선의 기울기).", ex:"예) f(x)=x² → f'(3)=6"},
+    {title:"정적분", body:"∫(0→a) xⁿ dx = a^(n+1)/(n+1)", ex:"예) ∫(0→2) x dx = 2"},
+    {title:"조합", body:"nCr = n!/(r!(n-r)!)", ex:"예) 5C2 = 10"},
+    {title:"이항정리", body:"(a+b)ⁿ 전개에서 aⁿ⁻ʳbʳ의 계수는 nCr", ex:"예) (a+b)⁴의 a²b² 계수 = 6"}
+  ]
+};
 
 let studySubject = 'kor';
 let studyCategory = null;
-let studyLevel = 'ms';
+let studyLevel = 'ms1';
 
 document.querySelectorAll('#studyLevelBoxes .level-box').forEach(box=>{
   box.addEventListener('click', ()=>{
@@ -1404,7 +1739,7 @@ function renderStudyBody(){
   body.innerHTML = '';
 
   if(studySubject === 'math'){
-    const list = studyCategory === 'formula2' ? MATH_FORMULAS_HS1 : MATH_FORMULAS;
+    const list = MATH_FORMULA_SETS[studyCategory] || MATH_FORMULAS;
     list.forEach(f=>{
       const card = document.createElement('div');
       card.className = 'formula-card';
@@ -1445,7 +1780,7 @@ document.getElementById('studyCtaBtn').addEventListener('click', ()=>{
   document.getElementById('studentName').focus();
 });
 
-studyCategory = STUDY_CATEGORIES.kor.filter(c=>c.level==='ms')[0].key;
+studyCategory = STUDY_CATEGORIES.kor.filter(c=>c.level==='ms1')[0].key;
 renderStudyChips();
 renderStudyBody();
 

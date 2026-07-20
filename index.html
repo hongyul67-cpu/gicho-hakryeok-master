@@ -1516,6 +1516,7 @@ function buildMath_ms2(){
   for(let a=1;a<=6;a++)for(let b=-4;b<=5;b++){ const t=`y = ${a}x ${b>=0?'+ '+b:'- '+(-b)}`; p.push(shortItem(`일차함수 ${t} 에서 기울기는?`,[String(a)])); p.push(shortItem(`일차함수 ${t} 에서 y절편은?`,[String(b)])); }
   [["0.3","1/3"],["0.6","2/3"],["0.1","1/9"],["0.2","2/9"],["0.4","4/9"],["0.5","5/9"],["0.7","7/9"],["0.8","8/9"]].forEach(([d,f])=>p.push(shortItem(`순환소수 0.${d.slice(2)}̇ (${d.slice(2)}이 반복)을 분수로 나타내면?`,[f])));
   for(let x=1;x<=6;x++)for(let y=1;y<=6;y++){ const s=x+y, dd=x-y; if(dd<0) continue; p.push(shortItem(`x+y=${s}, x-y=${dd} 일 때 x = ?`,[String(x)])); }
+  p.push(...mathProbItems(), ...MATH_MS2_CONCEPTS);   // EBS: 확률·닮음·도형
   return p;
 }
 function buildMath_ms3(){
@@ -1528,6 +1529,7 @@ function buildMath_ms3(){
   for(let pp=-4;pp<=4;pp++){ if(pp===0) continue; for(let q=-3;q<=4;q++) p.push(shortItem(`이차함수 y = (x ${pp>=0?'- '+pp:'+ '+(-pp)})² ${q>=0?'+ '+q:'- '+(-q)}의 꼭짓점 좌표는? (예: (1,2))`,[`(${pp},${q})`])); }
   [["sin 30°","1/2"],["cos 60°","1/2"],["sin 90°","1"],["cos 0°","1"],["tan 45°","1"],["sin 0°","0"],["cos 90°","0"],["sin 60°","√3/2"],["cos 30°","√3/2"],["sin 45°","√2/2"],["cos 45°","√2/2"]].forEach(([q,a])=>p.push(shortItem(`${q}의 값은? (예: 1/2)`,[a])));
   [[3,4,5],[6,8,10],[5,12,13],[8,15,17],[9,12,15],[7,24,25],[12,16,20],[20,21,29]].forEach(([a,b,c])=>p.push(shortItem(`직각삼각형에서 두 변이 ${a}, ${b}일 때 빗변의 길이는?`,[String(c)])));
+  p.push(...mathStatItems(), ...MATH_MS3_CONCEPTS);   // EBS: 원·통계(대푯값)
   return p;
 }
 function buildMath_hs2(){
@@ -1552,6 +1554,101 @@ function buildMath_hs3(){
   for(let n=3;n<=8;n++)for(let r=1;r<=Math.min(n,4);r++) p.push(shortItem(`${n}C${r} = ? (조합)`,[String(factorial(n)/(factorial(r)*factorial(n-r)))]));
   for(let n=2;n<=6;n++)for(let r=0;r<=n;r++) p.push(shortItem(`(a+b)^${n} 전개에서 a${sup(n-r)}b${sup(r)}의 계수는?`,[String(factorial(n)/(factorial(r)*factorial(n-r)))]));
   [[[2,4,6],4],[[1,2,3,4,5],3],[[10,20,30],20],[[5,15],10],[[2,4,6,8],5]].forEach(([arr,m])=>p.push(shortItem(`자료 ${arr.join(', ')}의 평균은?`,[String(m)])));
+  return p;
+}
+
+/* --- EBS 참고 보강: 영어 문법(중1~중3) --- */
+const ENG_MS1_TENSE = [   // 단순시제(현재·과거·미래) — 중1
+  ['"I ___ visit my grandma tomorrow."', ["will","willed","am","was"], "will"],
+  ['"She ___ going to study tonight."', ["is","are","am","be"], "is"],
+  ['"They ___ soccer yesterday."', ["played","play","plays","playing"], "played"],
+  ['"He ___ not come to school last week."', ["did","does","do","done"], "did"],
+  ['"___ you finish your homework yesterday?"', ["Did","Do","Does","Are"], "Did"],
+  ['"I ___ TV last night."', ["watched","watch","watches","watching"], "watched"],
+  ['"It ___ going to rain soon."', ["is","are","am","be"], "is"],
+  ['"We ___ meet again next week."', ["will","will to","are","were"], "will"],
+  ['"She ___ to school every day."', ["goes","go","going","gone"], "goes"],
+  ['"He ___ his homework an hour ago."', ["did","does","do","doing"], "did"]
+];
+const ENG_SUPERLATIVE = [   // 최상급 — 중2
+  ['"This is the ___ building in the city."', ["tallest","taller","most tall","tall"], "tallest"],
+  ['"She is the ___ student in class."', ["smartest","smarter","most smart","smart"], "smartest"],
+  ['"Health is the ___ thing of all."', ["most important","importantest","more important","important"], "most important"],
+  ['"It was the ___ day of my life."', ["best","better","goodest","most good"], "best"],
+  ['"That was the ___ movie ever."', ["worst","worse","baddest","most bad"], "worst"],
+  ['"He runs the ___ in his team."', ["fastest","faster","most fast","fast"], "fastest"],
+  ['"Winter is the ___ season here."', ["coldest","colder","most cold","cold"], "coldest"],
+  ['"She is the ___ of all the singers."', ["most popular","popularest","more popular","popular"], "most popular"]
+];
+const ENG_PARTICIPLE_MS2 = [   // 분사(현재분사/과거분사) — 중2
+  ['"Look at the ___ baby. (자고 있는)"', ["sleeping","slept","sleep","to sleep"], "sleeping"],
+  ['"The ___ window was dangerous. (깨진)"', ["broken","breaking","break","broke"], "broken"],
+  ['"I saw a ___ dog in the park. (달리는)"', ["running","run","ran","to run"], "running"],
+  ['"He bought a ___ car. (중고의)"', ["used","using","use","to use"], "used"],
+  ['"The ___ boy is my brother. (웃고 있는)"', ["smiling","smiled","smile","to smile"], "smiling"],
+  ['"She showed me a ___ letter. (쓰여진)"', ["written","writing","write","wrote"], "written"],
+  ['"The movie was ___. (지루하게 하는)"', ["boring","bored","bore","to bore"], "boring"],
+  ['"I was ___ with the result. (실망한)"', ["disappointed","disappointing","disappoint","to disappoint"], "disappointed"]
+];
+const ENG_PP_USAGE = [   // 현재완료 용법 — 중2
+  ['"I have ___ in Seoul for 5 years. (계속)"', ["lived","live","living","to live"], "lived"],
+  ['"She has just ___ her homework. (완료)"', ["finished","finish","finishing","to finish"], "finished"],
+  ['"Have you ever ___ sushi? (경험)"', ["eaten","ate","eat","eating"], "eaten"],
+  ['"He has ___ to Japan twice. (경험)"', ["been","went","go","going"], "been"],
+  ['"They have ___ here since morning. (계속)"', ["been","was","be","being"], "been"],
+  ['"I have already ___ that book. (완료)"', ["read","reads","reading","to read"], "read"]
+];
+const ENG_MS3_SPECIAL = [   // 관계부사·강조·도치 등 심화 — 중3
+  ['"This is the house ___ I was born."', ["where","which","who","when"], "where"],
+  ['"Tell me the reason ___ you were late."', ["why","where","who","which"], "why"],
+  ['"Do you remember the day ___ we met?"', ["when","where","which","who"], "when"],
+  ['"I don\'t know ___ he lives."', ["where","where does","that","what"], "where"],
+  ['"He is ___ tall ___ handsome."', ["both / and","either / or","neither / nor","not / but"], "both / and"],
+  ['"Here ___ the bus!"', ["comes","come","coming","came"], "comes"],
+  ['"Never ___ I seen such a sight."', ["have","has","had","having"], "have"],
+  ['"It was John ___ broke the window. (강조)"', ["that","what","which","whom"], "that"]
+];
+
+/* --- EBS 참고 보강: 수학 개념(중2 닮음·확률, 중3 원·통계) --- */
+const MATH_MS2_CONCEPTS = [
+  mcItem("서로 닮은 두 도형에서 대응하는 변의 길이의 비를 무엇이라 하는가?", ["닮음비","넓이비","부피비","각의 비"], 0),
+  mcItem("닮음비가 2:3인 두 도형의 넓이의 비는?", ["4:9","2:3","3:2","8:27"], 0),
+  mcItem("주사위 한 개를 던질 때 짝수의 눈이 나올 확률은?", ["1/2","1/3","1/6","2/3"], 0),
+  mcItem("동전 한 개를 던질 때 앞면이 나올 확률은?", ["1/2","1/4","1/3","1"], 0),
+  mcItem("확률 p의 값의 범위로 옳은 것은?", ["0 ≤ p ≤ 1","p ≥ 1","p ≤ 0","-1 ≤ p ≤ 1"], 0),
+  mcItem("반드시 일어나는 사건의 확률은?", ["1","0","1/2","알 수 없다"], 0),
+  mcItem("절대로 일어나지 않는 사건의 확률은?", ["0","1","1/2","-1"], 0),
+  mcItem("평행사변형의 성질로 옳지 않은 것은?", ["두 대각선의 길이가 같다","두 쌍의 대변이 평행하다","두 쌍의 대변의 길이가 같다","두 대각선이 서로를 이등분한다"], 0),
+  mcItem("마름모의 성질로 옳은 것은?", ["네 변의 길이가 같다","네 각이 모두 직각이다","대각선의 길이가 같다","한 쌍의 변만 평행하다"], 0),
+  mcItem("삼각형의 두 변의 중점을 이은 선분은 나머지 한 변과 어떤 관계인가?", ["평행하고 길이는 절반","수직이다","길이가 같다","평행하고 길이가 같다"], 0)
+];
+const MATH_MS3_CONCEPTS = [
+  mcItem("한 호에 대한 원주각의 크기는 그 호에 대한 중심각의 크기의 몇 배인가?", ["1/2배","2배","같다","1/4배"], 0),
+  mcItem("반원에 대한 원주각의 크기는?", ["90°","60°","120°","180°"], 0),
+  mcItem("같은 호에 대한 원주각의 크기는?", ["모두 같다","모두 다르다","중심각보다 크다","알 수 없다"], 0),
+  mcItem("자료를 크기순으로 늘어놓았을 때 한가운데 있는 값은?", ["중앙값","평균","최빈값","분산"], 0),
+  mcItem("자료에서 가장 많이 나타나는 값은?", ["최빈값","중앙값","평균","표준편차"], 0),
+  mcItem("편차의 총합은 항상 얼마인가?", ["0","1","평균","자료의 개수"], 0),
+  mcItem("자료가 흩어진 정도를 나타내는 값이 아닌 것은?", ["평균","분산","표준편차","편차"], 0),
+  mcItem("원의 접선은 그 접점을 지나는 반지름과 어떤 관계인가?", ["수직이다","평행하다","길이가 같다","45°를 이룬다"], 0)
+];
+function mathProbItems(){
+  const p=[]; const set=[[6,'주사위를 던질 때'],[10,'10개의 공에서 하나를 뽑을 때'],[8,'8장의 카드에서 하나를 뽑을 때'],[12,'12개의 구슬에서 하나를 뽑을 때'],[5,'5개의 제비에서 하나를 뽑을 때'],[20,'20명 중 한 명을 뽑을 때']];
+  set.forEach(([N,ctx])=>{ for(let k=2;k<=N-1;k++){ const g=gcd(k,N); const rn=k/g, rd=N/g; p.push(shortItem(`${ctx}, 조건을 만족하는 경우가 ${k}가지이면 그 확률은? (기약분수, 예: 1/2)`, [rd===1?String(rn):`${rn}/${rd}`])); } });
+  return p;
+}
+function mathStatItems(){
+  const p=[];
+  const datasets=[[3,5,7,9,11],[2,4,4,6,8],[10,20,30,40,50],[5,5,6,7,9],[2,2,4,6,6,6],[1,2,3,4,5,6,7],[8,6,4,2,10],[4,4,4,8,10]];
+  datasets.forEach(ds=>{
+    const s=[...ds].sort((a,b)=>a-b); const n=s.length;
+    const median = n%2 ? s[(n-1)/2] : (s[n/2-1]+s[n/2])/2;
+    if(Number.isInteger(median)) p.push(shortItem(`자료 ${ds.join(', ')}의 중앙값은?`, [String(median)]));
+    const freq={}; s.forEach(x=>freq[x]=(freq[x]||0)+1); let mode=s[0],mx=0; s.forEach(x=>{if(freq[x]>mx){mx=freq[x];mode=x;}});
+    if(mx>1) p.push(shortItem(`자료 ${ds.join(', ')}의 최빈값은?`, [String(mode)]));
+    const mean=s.reduce((a,b)=>a+b,0)/n;
+    if(Number.isInteger(mean)) p.push(shortItem(`자료 ${ds.join(', ')}의 평균은?`, [String(mean)]));
+  });
   return p;
 }
 
@@ -1601,9 +1698,18 @@ function poolKor_hs3(){ return [
   ...readingItems(KOR3_PASSAGES)
 ]; }
 
-function poolEng_ms1(){ return [...engVocabItems(ENG_VOCAB.slice(0,30)), ...engPluralItems(ENG_PLURALS), ...engBeVerbItems(), ...engArticleItems(), ...engPronounItems(ENG_PRONOUN)]; }
-function poolEng_ms2(){ return [...engVocabItems(ENG_VOCAB.slice(30)), ...engPastItems(ENG_PASTTENSE), ...engOppositeItems(ENG_OPPOSITES), ...engCompItems(ENG_MS2_COMP), ...engModalItems(ENG_MODALS), ...engPrepItems()]; }
-function poolEng_ms3(){ return [...engPPItems(ENG_PRESENT_PERFECT), ...engRelItems(ENG2_RELATIVE), ...engChoiceItems(ENG2_CONJUNCTION), ...engGerundItems(ENG2_GERUND_INF), ...engVocabItems(ENG2_VOCAB.slice(0,20))]; }
+function poolEng_ms1(){ return [   // 중1: 단순시제·조동사·to부정사/동명사 기초 (EBS)
+  ...engVocabItems(ENG_VOCAB.slice(0,30)), ...engPluralItems(ENG_PLURALS), ...engBeVerbItems(), ...engArticleItems(), ...engPronounItems(ENG_PRONOUN),
+  ...engChoiceItems(ENG_MS1_TENSE), ...engModalItems(ENG_MODALS), ...engGerundItems(ENG2_GERUND_INF)
+]; }
+function poolEng_ms2(){ return [   // 중2: 완료시제·수동태·비교급/최상급·분사 (EBS)
+  ...engVocabItems(ENG_VOCAB.slice(30)), ...engPastItems(ENG_PASTTENSE), ...engOppositeItems(ENG_OPPOSITES), ...engCompItems(ENG_MS2_COMP), ...engPrepItems(),
+  ...engChoiceItems(ENG_SUPERLATIVE), ...engChoiceItems(ENG_PARTICIPLE_MS2), ...engChoiceItems(ENG_PP_USAGE)
+]; }
+function poolEng_ms3(){ return [   // 중3: 관계사·접속사·강조/도치 심화 (EBS)
+  ...engPPItems(ENG_PRESENT_PERFECT), ...engRelItems(ENG2_RELATIVE), ...engChoiceItems(ENG2_CONJUNCTION), ...engVocabItems(ENG2_VOCAB.slice(0,20)),
+  ...engChoiceItems(ENG_MS3_SPECIAL)
+]; }
 function poolEng_hs1(){ return buildEngPoolHS1(); }
 function poolEng_hs2(){ return [...engChoiceItems(ENG_HS2_SUBJUNCTIVE), ...engChoiceItems(ENG_HS2_PARTICIPLE), ...engChoiceItems(ENG_HS2_INVERSION), ...engVocabItems(ENG3_VOCAB)]; }
 function poolEng_hs3(){ return [...engVocabItems(ENG3_VOCAB2), ...engChoiceItems(ENG3_USAGE), ...engIdiomItems(ENG2_IDIOMS), ...engVocabItems(ENG3_VOCAB)]; }
@@ -1705,11 +1811,11 @@ const STUDY_CATEGORIES = {
     {key:'vocab1', label:'단어', data:ENG_VOCAB.slice(0,30), level:'ms1'},
     {key:'plural', label:'복수형', data:ENG_PLURALS, level:'ms1'},
     {key:'pronoun', label:'소유격', data:ENG_PRONOUN, level:'ms1'},
+    {key:'modal', label:'조동사', data:ENG_MODALS, level:'ms1'},
     {key:'vocab2m', label:'단어', data:ENG_VOCAB.slice(30), level:'ms2'},
     {key:'past', label:'과거형', data:ENG_PASTTENSE, level:'ms2'},
     {key:'opposite', label:'반의어', data:ENG_OPPOSITES, level:'ms2'},
     {key:'comp', label:'비교급', data:ENG_MS2_COMP, level:'ms2'},
-    {key:'modal', label:'조동사', data:ENG_MODALS, level:'ms2'},
     {key:'pp', label:'과거분사', data:ENG_PRESENT_PERFECT, level:'ms3'},
     {key:'vocab3m', label:'단어', data:ENG2_VOCAB.slice(0,20), level:'ms3'},
     {key:'vocabH1', label:'단어(고1)', data:ENG2_VOCAB, level:'hs1'},

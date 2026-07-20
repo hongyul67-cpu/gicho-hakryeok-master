@@ -1328,6 +1328,89 @@ const KOR3_PASSAGES = [
    ]}
 ];
 
+/* --- 국어 문해력 데이터(속담·관용어·다의어) --- */
+const KOR_PROVERBS = [
+  ["발 없는 말이 천 리 간다","말은 순식간에 퍼지니 조심해야 한다"],
+  ["가는 말이 고와야 오는 말이 곱다","내가 남에게 잘해야 남도 나에게 잘한다"],
+  ["소 잃고 외양간 고친다","일이 잘못된 뒤에는 손을 써도 소용없다"],
+  ["원숭이도 나무에서 떨어진다","아무리 잘하는 사람도 실수할 때가 있다"],
+  ["호랑이도 제 말 하면 온다","마침 이야기하던 사람이 그 자리에 나타난다"],
+  ["백지장도 맞들면 낫다","쉬운 일이라도 서로 힘을 합하면 더 쉽다"],
+  ["사공이 많으면 배가 산으로 간다","간섭하는 사람이 많으면 일이 잘 안 된다"],
+  ["말 한마디에 천 냥 빚도 갚는다","말을 잘하면 어려운 일도 해결할 수 있다"],
+  ["천 리 길도 한 걸음부터","큰일도 작은 일부터 시작해야 한다"],
+  ["티끌 모아 태산","작은 것도 모으면 큰 것이 된다"],
+  ["가랑비에 옷 젖는 줄 모른다","사소한 것도 계속되면 크게 영향을 준다"],
+  ["등잔 밑이 어둡다","가까이 있는 것을 오히려 잘 알지 못한다"],
+  ["우물 안 개구리","넓은 세상을 모르고 좁은 생각에 갇혀 있다"],
+  ["낮말은 새가 듣고 밤말은 쥐가 듣는다","아무도 없는 곳에서도 말을 조심해야 한다"],
+  ["세 살 버릇 여든까지 간다","어릴 때 몸에 밴 버릇은 고치기 어렵다"],
+  ["콩 심은 데 콩 나고 팥 심은 데 팥 난다","원인에 따라 그에 맞는 결과가 생긴다"],
+  ["믿는 도끼에 발등 찍힌다","믿었던 사람에게 오히려 해를 입는다"],
+  ["열 번 찍어 안 넘어가는 나무 없다","꾸준히 노력하면 결국 이루어진다"],
+  ["윗물이 맑아야 아랫물이 맑다","윗사람이 바르게 해야 아랫사람도 바르다"],
+  ["돌다리도 두들겨 보고 건너라","잘 아는 일도 조심하여 확인하라"],
+  ["바늘 도둑이 소도둑 된다","작은 나쁜 버릇이 큰 잘못으로 이어진다"],
+  ["개구리 올챙이 적 생각 못 한다","형편이 나아지자 지난 어려운 때를 잊는다"],
+  ["빈 수레가 요란하다","잘 알지 못하는 사람이 더 아는 척하며 떠든다"],
+  ["고래 싸움에 새우 등 터진다","강한 자들의 다툼에 약한 자가 피해를 본다"],
+  ["급할수록 돌아가라","급한 일일수록 오히려 침착하게 하라"],
+  ["아니 땐 굴뚝에 연기 날까","원인이 없으면 결과도 생기지 않는다"],
+  ["가재는 게 편","비슷한 처지의 사람끼리 서로 편을 든다"],
+  ["누워서 떡 먹기","힘들이지 않아도 될 만큼 매우 쉬운 일"],
+  ["식은 죽 먹기","아주 하기 쉬운 일"],
+  ["원수는 외나무다리에서 만난다","싫은 사람을 공교롭게 다시 마주친다"],
+  ["웃는 낯에 침 못 뱉는다","좋게 대하는 사람에게 나쁘게 대하기 어렵다"],
+  ["작은 고추가 더 맵다","몸집이 작아도 재주나 야무짐이 뛰어나다"]
+];
+const KOR_IDIOM_EXPR = [
+  ["발이 넓다","아는 사람이 많고 활동 범위가 넓다"],
+  ["손이 크다","씀씀이가 후하고 크다"],
+  ["발 벗고 나서다","어떤 일에 적극적으로 나서다"],
+  ["입을 모으다","여러 사람이 같은 의견을 말하다"],
+  ["머리를 맞대다","서로 모여 의논하다"],
+  ["간이 콩알만 해지다","몹시 겁을 먹다"],
+  ["코가 높다","잘난 체하며 뽐내다"],
+  ["귀가 얇다","남의 말을 쉽게 잘 믿다"],
+  ["눈이 높다","기대하거나 바라는 수준이 높다"],
+  ["입이 무겁다","말이 적고 비밀을 잘 지키다"],
+  ["손을 씻다","나쁜 일에서 관계를 끊다"],
+  ["발이 묶이다","몸을 움직이지 못하게 되다"],
+  ["어깨가 무겁다","책임이 크고 부담스럽다"],
+  ["가슴이 뜨끔하다","마음에 찔리는 데가 있다"],
+  ["바가지를 긁다","불평하며 잔소리를 심하게 하다"],
+  ["시치미를 떼다","알고도 모르는 척하다"],
+  ["미역국을 먹다","시험에서 떨어지다"],
+  ["파김치가 되다","몹시 지쳐 늘어지다"],
+  ["손발이 맞다","함께 일할 때 마음이나 행동이 잘 맞다"],
+  ["입에 침이 마르다","다른 사람이나 물건을 몹시 칭찬하다"],
+  ["발등에 불이 떨어지다","일이 몹시 급하게 닥치다"],
+  ["코앞에 닥치다","시간이 매우 가까이 다가오다"],
+  ["김이 식다","재미나 의욕이 없어지다"],
+  ["금이 가다","사이가 벌어져 나빠지다"]
+];
+const KOR_MULTI_MEANING = [
+  ["손","일할 손이 부족하다.","일하는 사람","신체의 손","시곗바늘","솜씨"],
+  ["손","오늘 우리 집에 손이 오셨다.","손님","신체의 손","일손","도움"],
+  ["다리","책상 다리가 하나 부러졌다.","물체를 받치는 부분","사람의 다리","안경다리","강 위의 다리"],
+  ["눈","밤새 눈이 소복이 내렸다.","하늘에서 내리는 눈","사람의 눈","저울 눈금","그물의 구멍"],
+  ["눈","할머니는 눈이 어두우시다.","시력","내리는 눈","새싹","눈금"],
+  ["배","급히 먹었더니 배가 아프다.","신체의 배(복부)","타는 배","과일 배","곱절"],
+  ["배","우리는 배를 타고 섬에 갔다.","타는 배(선박)","신체의 배","과일 배","두 배"],
+  ["말","장군이 말을 타고 달렸다.","동물 말","사람의 말(언어)","곡식을 되는 말","장기의 말"],
+  ["말","항상 고운 말을 쓰도록 하자.","사람의 말(언어)","동물 말","곡식 되는 말","바둑돌"],
+  ["밤","밤이 깊어 모두 잠들었다.","해가 진 뒤의 밤","먹는 밤(과일)","가죽","단위"],
+  ["밤","가을에 밤을 구워 먹었다.","먹는 밤(과일)","해가 진 뒤의 밤","이름","색깔"],
+  ["차다","그는 힘껏 공을 찼다.","발로 차다","가득 차다","날씨가 차갑다","손목에 차다"],
+  ["차다","겨울이라 바람이 매우 차다.","차갑다","발로 차다","가득 차다","손목에 차다"],
+  ["타다","아침마다 버스를 타고 간다.","탈것에 오르다","불에 타다","물에 섞다","그네를 타다"],
+  ["타다","커피에 설탕을 타서 마셨다.","물에 섞다","탈것에 오르다","불에 타다","그네를 타다"]
+];
+function proverbQ(arr){return meaningQ(arr, t=>`속담 "${t}"의 뜻으로 알맞은 것은?`);}
+function idiomExprQ(arr){return meaningQ(arr, t=>`관용어 "${t}"의 뜻으로 알맞은 것은?`);}
+function multiMeaningItems(arr){const p=[];arr.forEach(([w,sent,correct,...others])=>{const ch=shuffle([correct,...others.slice(0,3)]);p.push(mcItem(`다음 문장에 쓰인 낱말 "${w}"의 뜻으로 알맞은 것은? — "${sent}"`,ch,ch.indexOf(correct)));});return p;}
+function multiMeaningPairs(arr){return arr.map(([w,sent,correct])=>[`"${sent}"\n\n▶ 여기서 '${w}'의 뜻은?`, correct]);}
+
 /* --- 영어 문항 생성기 --- */
 function engVocabItems(arr){const p=[];arr.forEach(([kr,en])=>p.push(shortItem(`"${kr}"를 뜻하는 영어 단어를 쓰시오.`,[en])));return p;}
 function engOppositeItems(arr){const p=[];arr.forEach(([a,b])=>{p.push(shortItem(`Write the opposite of "${a}".`,[b]));p.push(shortItem(`Write the opposite of "${b}".`,[a]));});return p;}
@@ -1473,20 +1556,38 @@ function buildMath_hs3(){
 }
 
 /* --- 학년별 과목 풀 조립 --- */
-function poolKor_ms1(){ return [...kAntonymQ(KOR_ANTONYMS), ...kPosQ(KOR_POS), ...kSynonymQ(KOR_SYNONYMS), ...readingItems(KOR_PASSAGES.slice(0,10))]; }
-function poolKor_ms2(){ return [...kHonorQ(KOR_HONORIFIC), ...kIdiomQ(KOR_IDIOMS), ...kSpellQ(KOR_SPELLING), ...readingItems(KOR_PASSAGES.slice(10))]; }
+function poolKor_ms1(){ return [
+  ...kAntonymQ(KOR_ANTONYMS), ...kPosQ(KOR_POS), ...kSynonymQ(KOR_SYNONYMS),
+  ...proverbQ(KOR_PROVERBS.slice(0,16)),                        // 문해력: 속담
+  ...multiMeaningItems(KOR_MULTI_MEANING.slice(0,7)),           // 문해력: 다의어
+  ...readingItems(KOR_PASSAGES.slice(0,10))                     // 문해력: 독해
+]; }
+function poolKor_ms2(){ return [
+  ...kHonorQ(KOR_HONORIFIC), ...kIdiomQ(KOR_IDIOMS), ...kSpellQ(KOR_SPELLING),
+  ...idiomExprQ(KOR_IDIOM_EXPR),                                // 문해력: 관용어
+  ...proverbQ(KOR_PROVERBS.slice(16)),                          // 문해력: 속담
+  ...readingItems(KOR_PASSAGES.slice(10))
+]; }
 function poolKor_ms3(){ return [
   ...classifyQ(KOR_PHONOLOGY, w=>`다음 단어에 일어나는 음운 변동은? — "${w}"`, KOR_PHON_TYPES),
   ...classifyQ(KOR_SENT_STRUCT, w=>`다음 문장의 짜임으로 알맞은 것은? — "${w}"`, KOR_SENT_TYPES),
   ...kAntonymQ(KOR2_HANJA),
   ...classifyQ(KOR2_PIDONG_SADONG, w=>`다음 문장은 피동 표현인가, 사동 표현인가? — "${w}"`, ["피동","사동"]),
+  ...multiMeaningItems(KOR_MULTI_MEANING),                      // 문해력: 다의어
+  ...proverbQ(KOR_PROVERBS),                                    // 문해력: 속담
   ...readingItems(KOR2_PASSAGES.slice(0,7))
 ]; }
-function poolKor_hs1(){ return buildKorPoolHS1(); }
+function poolKor_hs1(){ return [
+  ...buildKorPoolHS1(),
+  ...idiomExprQ(KOR_IDIOM_EXPR),                                // 문해력: 관용어
+  ...multiMeaningItems(KOR_MULTI_MEANING)                       // 문해력: 다의어
+]; }
 function poolKor_hs2(){ return [
   ...meaningQ(KOR_LIT_TERMS, t=>`문학 용어 "${t}"의 뜻으로 알맞은 것은?`),
   ...classifyQ(KOR_WORDFORM, w=>`"${w}"의 단어 짜임으로 알맞은 것은?`, KOR_WORDFORM_TYPES),
   ...classifyQ(KOR2_RHETORIC, w=>`다음 표현에 쓰인 표현법(수사법)은? — "${w}"`, KOR2_RHETORIC_CHOICES),
+  ...proverbQ(KOR_PROVERBS),                                    // 문해력: 속담
+  ...multiMeaningItems(KOR_MULTI_MEANING),                      // 문해력: 다의어
   ...readingItems(KOR3_PASSAGES)
 ]; }
 function poolKor_hs3(){ return [
@@ -1494,6 +1595,8 @@ function poolKor_hs3(){ return [
   ...kIdiomQ(KOR2_IDIOMS2),
   ...meaningQ(KOR_LIT_TERMS, t=>`문학 용어 "${t}"의 뜻은?`),
   ...classifyQ(KOR_WORDFORM, w=>`"${w}"의 단어 형성 방법은?`, KOR_WORDFORM_TYPES),
+  ...idiomExprQ(KOR_IDIOM_EXPR),                                // 문해력: 관용어
+  ...multiMeaningItems(KOR_MULTI_MEANING),                      // 문해력: 다의어
   ...readingItems(KOR2_PASSAGES.slice(7)),
   ...readingItems(KOR3_PASSAGES)
 ]; }
@@ -1564,29 +1667,39 @@ const STUDY_CATEGORIES = {
     {key:'antonym', label:'반의어', data:KOR_ANTONYMS, level:'ms1'},
     {key:'synonym', label:'유의어', data:KOR_SYNONYMS, level:'ms1'},
     {key:'pos', label:'품사', data:KOR_POS, level:'ms1'},
-    {key:'reading1', label:'문해력', data:readingPairs(KOR_PASSAGES.slice(0,10)), level:'ms1'},
+    {key:'proverb1', label:'속담', data:KOR_PROVERBS.slice(0,16), level:'ms1'},
+    {key:'multi1', label:'다의어', data:multiMeaningPairs(KOR_MULTI_MEANING.slice(0,7)), level:'ms1'},
+    {key:'reading1', label:'문해력(독해)', data:readingPairs(KOR_PASSAGES.slice(0,10)), level:'ms1'},
     {key:'honorific', label:'높임말', data:KOR_HONORIFIC, level:'ms2'},
     {key:'idiom', label:'사자성어', data:KOR_IDIOMS, level:'ms2'},
     {key:'spelling', label:'맞춤법', data:KOR_SPELLING, level:'ms2'},
-    {key:'reading2', label:'문해력', data:readingPairs(KOR_PASSAGES.slice(10)), level:'ms2'},
+    {key:'idiomexpr2', label:'관용어', data:KOR_IDIOM_EXPR, level:'ms2'},
+    {key:'proverb2', label:'속담', data:KOR_PROVERBS.slice(16), level:'ms2'},
+    {key:'reading2', label:'문해력(독해)', data:readingPairs(KOR_PASSAGES.slice(10)), level:'ms2'},
     {key:'phon', label:'음운 변동', data:KOR_PHONOLOGY, level:'ms3'},
     {key:'sentstruct', label:'문장의 짜임', data:KOR_SENT_STRUCT, level:'ms3'},
     {key:'hanja3', label:'한자어 반의어', data:KOR2_HANJA, level:'ms3'},
     {key:'pidong3', label:'피동·사동', data:KOR2_PIDONG_SADONG, level:'ms3'},
-    {key:'reading3', label:'문해력', data:readingPairs(KOR2_PASSAGES.slice(0,7)), level:'ms3'},
+    {key:'multi3', label:'다의어', data:multiMeaningPairs(KOR_MULTI_MEANING), level:'ms3'},
+    {key:'proverb3', label:'속담', data:KOR_PROVERBS, level:'ms3'},
+    {key:'reading3', label:'문해력(독해)', data:readingPairs(KOR2_PASSAGES.slice(0,7)), level:'ms3'},
     {key:'sentcomp', label:'문장 성분', data:KOR2_SENT.map(([s,w,c])=>[`${s} (밑줄: ${w})`, c]), level:'hs1'},
     {key:'honortype', label:'높임법 종류', data:KOR2_HONOR_TYPE, level:'hs1'},
     {key:'rhetoric', label:'표현법', data:KOR2_RHETORIC, level:'hs1'},
     {key:'idiom2', label:'사자성어(심화)', data:KOR2_IDIOMS2, level:'hs1'},
-    {key:'readingH1', label:'문해력(심화)', data:readingPairs(KOR2_PASSAGES), level:'hs1'},
+    {key:'idiomexprH1', label:'관용어', data:KOR_IDIOM_EXPR, level:'hs1'},
+    {key:'multiH1', label:'다의어', data:multiMeaningPairs(KOR_MULTI_MEANING), level:'hs1'},
+    {key:'readingH1', label:'문해력(독해)', data:readingPairs(KOR2_PASSAGES), level:'hs1'},
     {key:'litterm2', label:'문학 개념', data:KOR_LIT_TERMS, level:'hs2'},
     {key:'wordform2', label:'단어 형성', data:KOR_WORDFORM, level:'hs2'},
     {key:'rhetoric2', label:'표현법', data:KOR2_RHETORIC, level:'hs2'},
-    {key:'reading_h2', label:'비문학 독해', data:readingPairs(KOR3_PASSAGES), level:'hs2'},
+    {key:'proverbH2', label:'속담', data:KOR_PROVERBS, level:'hs2'},
+    {key:'reading_h2', label:'문해력(비문학)', data:readingPairs(KOR3_PASSAGES), level:'hs2'},
     {key:'genre3', label:'문학 갈래', data:KOR_LIT_GENRE, level:'hs3'},
     {key:'litterm3', label:'문학 개념', data:KOR_LIT_TERMS, level:'hs3'},
     {key:'idiom3', label:'사자성어', data:KOR2_IDIOMS2, level:'hs3'},
-    {key:'reading_h3', label:'독서', data:readingPairs(KOR2_PASSAGES.slice(7)), level:'hs3'}
+    {key:'idiomexprH3', label:'관용어', data:KOR_IDIOM_EXPR, level:'hs3'},
+    {key:'reading_h3', label:'문해력(독서)', data:readingPairs(KOR2_PASSAGES.slice(7)), level:'hs3'}
   ],
   eng: [
     {key:'vocab1', label:'단어', data:ENG_VOCAB.slice(0,30), level:'ms1'},

@@ -2267,10 +2267,17 @@ function gradeAndShowResult(){
   });
 
   if(name) clearLocalProgress(name);
+  // 어떤 시험을 봤는지(수준·과목·과목별 점수) 기록
+  const subjAbbr = {kor:'국', eng:'영', math:'수'};
+  const tested = ['kor','eng','math'].filter(s=>perSubject[s].total>0);
+  const subjTag = tested.map(s=>subjAbbr[s]).join('');
+  const perSubjText = tested.map(s=>`${SUBJECT_NAME[s]} ${perSubject[s].correct}/${perSubject[s].total}`).join(', ');
+  lastTestInfo = { level: LEVEL_NAME[selectedLevel], subjTag, detail: `${LEVEL_NAME[selectedLevel]} · ${perSubjText}` };
   lastResultSummary = {
     score: totalCount ? Math.round(totalCorrect/totalCount*100) : 0,
     correct: totalCorrect, total: totalCount, wrong: wrongNums,
-    durationSec: quizStartTime ? Math.round((Date.now()-quizStartTime)/1000) : undefined
+    durationSec: quizStartTime ? Math.round((Date.now()-quizStartTime)/1000) : undefined,
+    labels: lastTestInfo.detail
   };
   show('screenResult');
   window.scrollTo({top:0, behavior:'smooth'});
@@ -2278,6 +2285,7 @@ function gradeAndShowResult(){
 
 /* ===================== 결과 제출(구글시트) ===================== */
 let lastResultSummary = null;
+let lastTestInfo = null;
 document.getElementById('submitResultBtn').addEventListener('click', ()=>{
   if(!lastResultSummary) return;
   if(typeof ResultCollector === 'undefined'){
@@ -2290,6 +2298,12 @@ document.getElementById('submitResultBtn').addEventListener('click', ()=>{
     if(name){
       const last = JSON.parse(localStorage.getItem('rc_student')||'{}');
       localStorage.setItem('rc_student', JSON.stringify(Object.assign({}, last, {name})));
+    }
+  }catch(e){}
+  // 어떤 시험을 봤는지 시트 탭 이름에 표시(수준·과목) → 교사가 바로 구분 가능
+  try{
+    if(lastTestInfo && ResultCollector.config){
+      ResultCollector.config.tool = `기초학력 마스터 · ${lastTestInfo.level} · ${lastTestInfo.subjTag}`;
     }
   }catch(e){}
   ResultCollector.open(lastResultSummary);

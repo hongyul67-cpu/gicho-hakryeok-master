@@ -311,7 +311,11 @@
           <button class="btn-fresh" id="freshStartBtn">새로 시작하기</button>
         </div>
       </div>
-      <div class="field">
+      <div id="assignmentBanner" class="resume-banner hidden" style="border-color:#12b886; background:#e6fbf3;">
+        <div class="title" style="color:#099268;">📋 오늘의 과제</div>
+        <div class="desc" id="assignmentDesc"></div>
+      </div>
+      <div class="field" id="levelField">
         <label>난이도 수준 선택</label>
         <div class="level-grid" id="testLevelBoxes">
           <div class="level-box on" data-l="ms1">중1</div>
@@ -323,7 +327,7 @@
           <div class="level-box" data-l="all">전체</div>
         </div>
       </div>
-      <div class="field">
+      <div class="field" id="subjectField">
         <label>응시할 과목 선택 (복수 선택 가능) · 과목당 20문항이 매번 랜덤 출제됩니다</label>
         <div class="subject-grid">
           <div class="subject-box on" data-s="kor" id="box-kor">국어<span class="cnt" id="cnt-kor"></span></div>
@@ -418,6 +422,15 @@ function polyStr(a,b){
 
 const SUBJECT_NAME = {kor:"국어", eng:"영어", math:"수학"};
 const LEVEL_NAME = {ms1:"중1", ms2:"중2", ms3:"중3", hs1:"고1", hs2:"고2", hs3:"고3", all:"전체"};
+
+/* ===================== 과제 모드 =====================
+   교사가 만든 링크(?asgn=kor:ms3,math:ms2&n=10&atitle=...)로 들어오면
+   과목·학년이 고정된 과제가 되고, 학생은 나오는 문항을 전부 풀어 제출한다. */
+let ASSIGNMENT = null;
+function levelForSubject(subject){
+  if(ASSIGNMENT){ const it = ASSIGNMENT.plan.find(p=>p.subject===subject); if(it) return it.level; }
+  return selectedLevel;
+}
 
 /* ===================== 진행 저장 (이 브라우저에 한해 이어하기) =====================
    교사 확인·결과 제출은 result-collector(구글시트 위젯, collector.js)가 담당한다.
@@ -2133,6 +2146,13 @@ function buildQuiz(resumeItems){
       subjectGroups[it.subject] = subjectGroups[it.subject] || [];
       subjectGroups[it.subject].push(it);
     });
+  } else if(ASSIGNMENT){
+    // 과제 모드: 계획된 (과목·학년)마다 n문항씩 랜덤 출제
+    ASSIGNMENT.plan.forEach(({subject, level})=>{
+      const src = poolByLevel(subject, level);
+      const drawn = pick(src, Math.min(ASSIGNMENT.n, src.length));
+      subjectGroups[subject] = drawn.map(data=>({subject, type:data.type, q:data.q, choices:data.choices||null, answer:(data.answer===undefined?null:data.answer), answers:data.answers||null, userAnswer:null}));
+    });
   } else {
     const order = ['kor','eng','math'].filter(s=>selectedSubjects.has(s));
     order.forEach(subject=>{
@@ -2149,7 +2169,7 @@ function buildQuiz(resumeItems){
     const title = document.createElement('div');
     title.className = 'section-title';
     title.dataset.s = subject;
-    title.innerHTML = `<span class="dot"></span>${SUBJECT_NAME[subject]} · ${LEVEL_NAME[selectedLevel]} (${items.length}문항)`;
+    title.innerHTML = `<span class="dot"></span>${SUBJECT_NAME[subject]} · ${LEVEL_NAME[levelForSubject(subject)]} (${items.length}문항)`;
     body.appendChild(title);
 
     items.forEach((it, idx)=>{
@@ -2288,7 +2308,10 @@ function gradeAndShowResult(){
   const now = new Date();
   const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
   document.getElementById('resultName').textContent = `${name} 학생의 채점 결과`;
-  document.getElementById('resultMeta').textContent = `응시일: ${dateStr} · 수준: ${LEVEL_NAME[selectedLevel]}`;
+  const metaLevel = ASSIGNMENT
+    ? (ASSIGNMENT.title ? ASSIGNMENT.title : '과제 · ' + ASSIGNMENT.plan.map(p=>SUBJECT_NAME[p.subject]+'('+LEVEL_NAME[p.level]+')').join(' '))
+    : ('수준: ' + LEVEL_NAME[selectedLevel]);
+  document.getElementById('resultMeta').textContent = `응시일: ${dateStr} · ${metaLevel}`;
 
   // 점수 카드
   const scoreGrid = document.getElementById('scoreGrid');
@@ -2337,8 +2360,9 @@ function gradeAndShowResult(){
   const subjAbbr = {kor:'국', eng:'영', math:'수'};
   const tested = ['kor','eng','math'].filter(s=>perSubject[s].total>0);
   const subjTag = tested.map(s=>subjAbbr[s]).join('');
-  const perSubjText = tested.map(s=>`${SUBJECT_NAME[s]} ${perSubject[s].correct}/${perSubject[s].total}`).join(', ');
-  lastTestInfo = { level: LEVEL_NAME[selectedLevel], subjTag, detail: `${LEVEL_NAME[selectedLevel]} · ${perSubjText}` };
+  const perSubjText = tested.map(s=>`${SUBJECT_NAME[s]}(${LEVEL_NAME[levelForSubject(s)]}) ${perSubject[s].correct}/${perSubject[s].total}`).join(', ');
+  const levelTag = ASSIGNMENT ? (ASSIGNMENT.title ? ASSIGNMENT.title.slice(0,20) : '과제') : LEVEL_NAME[selectedLevel];
+  lastTestInfo = { level: levelTag, subjTag, detail: `${levelTag} · ${perSubjText}` };
   lastResultSummary = {
     score: totalCount ? Math.round(totalCorrect/totalCount*100) : 0,
     correct: totalCorrect, total: totalCount, wrong: wrongNums,
@@ -2370,7 +2394,8 @@ document.getElementById('submitResultBtn').addEventListener('click', ()=>{
   // 어떤 시험을 봤는지 시트 탭 이름에 표시(수준·과목) → 교사가 바로 구분 가능
   try{
     if(lastTestInfo && ResultCollector.config){
-      ResultCollector.config.tool = `기초학력 마스터 · ${lastTestInfo.level} · ${lastTestInfo.subjTag}`;
+      const prefix = ASSIGNMENT ? '기초학력 과제' : '기초학력 마스터';
+      ResultCollector.config.tool = `${prefix} · ${lastTestInfo.level} · ${lastTestInfo.subjTag}`;
     }
   }catch(e){}
   ResultCollector.open(lastResultSummary);
@@ -2410,6 +2435,39 @@ function show(id){
     document.getElementById(s).classList.toggle('hidden', s !== id);
   });
 }
+
+/* ===================== 과제 모드 초기화 ===================== */
+(function initAssignment(){
+  let qs; try{ qs = new URLSearchParams(location.search); }catch(e){ return; }
+  const asgn = qs.get('asgn');
+  if(!asgn) return;
+  const plan = asgn.split(',').map(x=>{
+    const [subject, level] = x.split(':');
+    return { subject:(subject||'').trim(), level:(level||'').trim() };
+  }).filter(p=>['kor','eng','math'].includes(p.subject) && LEVEL_NAME[p.level] && p.level!=='all');
+  if(!plan.length) return;
+  const n = Math.max(1, Math.min(30, parseInt(qs.get('n')||'10',10) || 10));
+  const title = (qs.get('atitle')||'').slice(0,40);
+  ASSIGNMENT = { plan, n, title };
+  selectedSubjects = new Set(plan.map(p=>p.subject));
+
+  // 학생용 화면 정리: 학습/테스트 전환·수준·과목 선택 숨김
+  setMode('test');
+  const nav = document.getElementById('modeNav'); if(nav) nav.classList.add('hidden');
+  ['levelField','subjectField'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+  const sub = document.querySelector('header.top p'); if(sub) sub.textContent = title ? title : '국어·영어·수학 과제';
+  const startBtn = document.getElementById('startBtn'); if(startBtn) startBtn.textContent = '과제 시작하기';
+
+  // 과제 안내 배너
+  const banner = document.getElementById('assignmentBanner');
+  const desc = document.getElementById('assignmentDesc');
+  if(banner && desc){
+    desc.innerHTML = plan.map(p=>`· <b>${SUBJECT_NAME[p.subject]}</b> (${LEVEL_NAME[p.level]}) ${ASSIGNMENT.n}문항`).join('<br>')
+      + `<br><span style="color:#099268;">모두 풀고 제출하세요.</span>`;
+    if(title){ const t=banner.querySelector('.title'); if(t) t.textContent = '📋 ' + title; }
+    banner.classList.remove('hidden');
+  }
+})();
 </script>
 </body>
 </html>

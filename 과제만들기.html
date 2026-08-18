@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기초학력 과제 링크 만들기 (교사용)</title>
+<style>
+  :root{ --bg:#f4f6fb; --card:#fff; --text:#22262e; --sub:#6b7280; --border:#e3e6ec; --accent:#12b886; }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif; background:var(--bg); color:var(--text); line-height:1.6;}
+  .wrap{max-width:640px; margin:0 auto; padding:24px 16px 80px;}
+  h1{font-size:22px; margin:8px 0 4px;}
+  .lead{color:var(--sub); font-size:14px; margin:0 0 20px;}
+  .card{background:var(--card); border-radius:16px; padding:22px; box-shadow:0 2px 12px rgba(0,0,0,.06); margin-bottom:18px;}
+  .field{margin-bottom:16px;}
+  .field > label{display:block; font-weight:700; margin-bottom:8px; font-size:14px;}
+  input[type=text], input[type=number], select{
+    width:100%; padding:11px 12px; border:2px solid var(--border); border-radius:10px; font-size:15px; background:#fff; color:var(--text);
+  }
+  .subj-row{display:flex; align-items:center; gap:12px; padding:10px 12px; border:1.5px solid var(--border); border-radius:12px; margin-bottom:10px;}
+  .subj-row.on{border-color:var(--accent); background:#e6fbf3;}
+  .subj-row label.chk{display:flex; align-items:center; gap:8px; font-weight:700; min-width:96px; cursor:pointer;}
+  .subj-row input[type=checkbox]{width:18px; height:18px; accent-color:var(--accent);}
+  .subj-row select{flex:1;}
+  .row2{display:flex; gap:12px;}
+  .row2 > div{flex:1;}
+  button{font-family:inherit; cursor:pointer; border:none; border-radius:10px; font-weight:700;}
+  .btn-main{display:block; width:100%; padding:15px; font-size:16px; background:linear-gradient(135deg,#12b886,#099268); color:#fff; box-shadow:0 6px 16px rgba(18,184,134,.3); margin-top:8px;}
+  .result{margin-top:16px; display:none;}
+  .result.show{display:block;}
+  .linkbox{width:100%; padding:12px; border:2px dashed var(--accent); border-radius:10px; font-size:13px; background:#f8fffb; word-break:break-all; min-height:70px; resize:vertical;}
+  .btns{display:flex; gap:10px; margin-top:10px;}
+  .btns button{flex:1; padding:12px; font-size:14px;}
+  .btn-copy{background:#12b886; color:#fff;}
+  .btn-open{background:#eef0f4; color:var(--text);}
+  .hint{font-size:12px; color:var(--sub); margin-top:6px;}
+  .msg{text-align:center; font-size:13px; margin-top:8px; min-height:18px; color:var(--accent); font-weight:700;}
+  ol{padding-left:20px; font-size:13px; color:var(--sub);} ol li{margin:4px 0;}
+  code{background:#eef0f4; padding:1px 5px; border-radius:4px; font-size:12px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📋 기초학력 과제 링크 만들기</h1>
+  <p class="lead">과목과 학년을 골라 <b>과제 링크</b>를 만드세요. 학생은 그 링크로 들어가면 정해진 문항만 풀고 제출합니다. (학생이 스스로 수준·과목을 고르는 화면은 숨겨집니다.)</p>
+
+  <div class="card">
+    <div class="field">
+      <label>1. 과목과 학년 선택 (필요한 과목만 체크)</label>
+      <div class="subj-row" data-s="kor">
+        <label class="chk"><input type="checkbox" class="inc" checked> 국어</label>
+        <select class="lvl"></select>
+      </div>
+      <div class="subj-row" data-s="eng">
+        <label class="chk"><input type="checkbox" class="inc" checked> 영어</label>
+        <select class="lvl"></select>
+      </div>
+      <div class="subj-row" data-s="math">
+        <label class="chk"><input type="checkbox" class="inc" checked> 수학</label>
+        <select class="lvl"></select>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>2. 과목당 문항 수</label>
+        <input type="number" id="count" min="1" max="30" value="10">
+      </div>
+      <div class="field">
+        <label>3. 과제 제목 (선택)</label>
+        <input type="text" id="atitle" placeholder="예: 3월 기초학력 진단">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>4. 결과 수집 주소 (선택) — 학생 제출을 내 구글시트로 받기</label>
+      <input type="text" id="rc" placeholder="https://script.google.com/macros/s/.../exec">
+      <div class="hint">비워 두면 제출은 되지만 시트로 저장되지 않습니다. 주소 만드는 법은 result-collector 안내 참고.</div>
+    </div>
+
+    <button class="btn-main" id="makeBtn">과제 링크 만들기 →</button>
+
+    <div class="result" id="result">
+      <div class="field" style="margin-top:16px; margin-bottom:8px;">
+        <label>✅ 학생에게 보낼 링크</label>
+        <textarea class="linkbox" id="linkbox" readonly></textarea>
+      </div>
+      <div class="btns">
+        <button class="btn-copy" id="copyBtn">📋 링크 복사</button>
+        <button class="btn-open" id="openBtn">🔎 미리 보기</button>
+      </div>
+      <div class="msg" id="msg"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <label style="font-weight:700; display:block; margin-bottom:8px;">사용 방법</label>
+    <ol>
+      <li>과목·학년·문항 수를 고르고 <b>[과제 링크 만들기]</b>를 누르세요.</li>
+      <li>만들어진 링크를 복사해 학급 밴드·카톡·클래스룸에 공유하세요.</li>
+      <li>학생은 링크로 들어가 이름을 입력하고 <b>[과제 시작하기]</b> → 문제를 모두 풀고 제출합니다.</li>
+      <li>매번 <b>랜덤 출제</b>되므로 학생마다 문항이 조금씩 다릅니다(같은 학년·범위).</li>
+    </ol>
+  </div>
+</div>
+
+<script>
+const BASE = 'https://hongyul67-cpu.github.io/gicho-hakryeok-master/';
+const LEVELS = [['ms1','중1'],['ms2','중2'],['ms3','중3'],['hs1','고1'],['hs2','고2'],['hs3','고3']];
+const DEFAULT_LVL = {kor:'ms3', eng:'ms3', math:'ms3'};
+
+// 학년 드롭다운 채우기
+document.querySelectorAll('.subj-row').forEach(row=>{
+  const s = row.dataset.s;
+  const sel = row.querySelector('.lvl');
+  sel.innerHTML = LEVELS.map(([v,label])=>`<option value="${v}"${v===DEFAULT_LVL[s]?' selected':''}>${label}</option>`).join('');
+  const chk = row.querySelector('.inc');
+  const sync = ()=> row.classList.toggle('on', chk.checked);
+  chk.addEventListener('change', sync); sync();
+});
+
+document.getElementById('makeBtn').addEventListener('click', ()=>{
+  const plan = [];
+  document.querySelectorAll('.subj-row').forEach(row=>{
+    if(row.querySelector('.inc').checked){
+      plan.push(row.dataset.s + ':' + row.querySelector('.lvl').value);
+    }
+  });
+  if(!plan.length){ alert('과목을 하나 이상 선택하세요.'); return; }
+  const n = Math.max(1, Math.min(30, parseInt(document.getElementById('count').value,10)||10));
+  const title = document.getElementById('atitle').value.trim();
+  const rc = document.getElementById('rc').value.trim();
+
+  const params = new URLSearchParams();
+  params.set('asgn', plan.join(','));
+  params.set('n', String(n));
+  if(title) params.set('atitle', title);
+  if(rc) params.set('rc', rc);
+
+  const url = BASE + '?' + params.toString();
+  document.getElementById('linkbox').value = url;
+  document.getElementById('result').classList.add('show');
+  document.getElementById('msg').textContent = '';
+  document.getElementById('openBtn').dataset.url = url;
+});
+
+document.getElementById('copyBtn').addEventListener('click', async ()=>{
+  const url = document.getElementById('linkbox').value;
+  try{
+    await navigator.clipboard.writeText(url);
+    document.getElementById('msg').textContent = '✔ 복사되었습니다!';
+  }catch(e){
+    const el = document.getElementById('linkbox'); el.focus(); el.select();
+    document.getElementById('msg').textContent = '복사하려면 Ctrl+C 를 누르세요.';
+  }
+});
+document.getElementById('openBtn').addEventListener('click', ()=>{
+  const url = document.getElementById('openBtn').dataset.url;
+  if(url) window.open(url, '_blank');
+});
+</script>
+</body>
+</html>

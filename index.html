@@ -2394,8 +2394,10 @@ document.getElementById('submitResultBtn').addEventListener('click', ()=>{
   // 어떤 시험을 봤는지 시트 탭 이름에 표시(수준·과목) → 교사가 바로 구분 가능
   try{
     if(lastTestInfo && ResultCollector.config){
+      /* 시트 탭은 하나로 — 수준·과목은 mode 로 (규약 §1 ①) */
       const prefix = ASSIGNMENT ? '기초학력 과제' : '기초학력 마스터';
-      ResultCollector.config.tool = `${prefix} · ${lastTestInfo.level} · ${lastTestInfo.subjTag}`;
+      ResultCollector.config.tool = prefix;
+      lastResultSummary.mode = `${lastTestInfo.subjTag} — ${lastTestInfo.level}`;
     }
   }catch(e){}
   ResultCollector.open(lastResultSummary);

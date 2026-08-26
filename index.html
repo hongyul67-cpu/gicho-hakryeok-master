@@ -262,6 +262,7 @@
 <div id="modeNav">
   <button id="navStudy">📖 학습하기</button>
   <button id="navTest" class="active">📝 테스트하기</button>
+  <button id="navBoard">🖥️ 수업 슬라이드</button>
 </div>
 <div class="wrap">
   <header class="top">
@@ -292,6 +293,21 @@
       <div class="cat-chips" id="studyCatChips"></div>
       <div id="studyBody"></div>
       <button class="study-cta" id="studyCtaBtn" data-s="kor">이 과목으로 테스트 시작하기 →</button>
+    </div>
+  </section>
+
+  <!-- ============ 수업 슬라이드 (예전 board.html) ============ -->
+  <section id="screenBoard" class="hidden">
+    <div class="card">
+      <p style="margin:0 0 14px;color:var(--sub);font-size:14px">
+        전자칠판·프로젝터로 앞에서 끌고 가는 화면입니다.
+        <b>요점 → 발문 → 퀴즈 → 정답</b>을 하나씩 열며 진행하세요. (← → 키 또는 화면 아래 버튼)
+      </p>
+      <div id="boardHome"></div>
+      <p style="margin:18px 0 0;font-size:12.5px;color:var(--sub)">
+        📋 <a href="과제만들기.html" style="color:#4c6ef5;font-weight:700">과제 링크 만들기 (교사용)</a>
+        — 반·문항 수를 골라 학생에게 보낼 링크를 만듭니다.
+      </p>
     </div>
   </section>
 
@@ -1829,12 +1845,30 @@ document.getElementById('navStudy').addEventListener('click', ()=>{
 document.getElementById('navTest').addEventListener('click', ()=>{
   setMode('test');
 });
+document.getElementById('navBoard').addEventListener('click', ()=>{
+  setMode('board');
+});
 function setMode(mode){
   document.getElementById('screenStudy').classList.toggle('hidden', mode!=='study');
   document.getElementById('screenTest').classList.toggle('hidden', mode!=='test');
+  document.getElementById('screenBoard').classList.toggle('hidden', mode!=='board');
   document.getElementById('navStudy').classList.toggle('active', mode==='study');
   document.getElementById('navTest').classList.toggle('active', mode==='test');
+  document.getElementById('navBoard').classList.toggle('active', mode==='board');
+  if(mode==='board') openBoardHome();
   window.scrollTo({top:0, behavior:'smooth'});
+}
+
+/* 수업 슬라이드 — 예전 board.html 이 이 안으로 들어왔다.
+   원고는 lesson.js, 화면은 board.js(모든 도구 공용)가 담당한다.
+   단원 목록은 한 번만 그리면 되므로 boardReady 로 막는다. */
+let boardReady = false;
+function openBoardHome(){
+  if(boardReady) return;
+  const el = document.getElementById('boardHome');
+  if(!window.Board){ el.innerHTML = '<p style="color:var(--sub)">수업자료를 불러오지 못했습니다.</p>'; return; }
+  Board.home(el, {hint:'국어 · 영어 · 수학에서 <b>한 번 잡아 두면 오래 가는 것</b>만 골라 담았습니다.<br>슬라이드 끝의 버튼을 누르면 진단 도구로 넘어갑니다(<code>?rc=…</code> 유지).'});
+  boardReady = true;
 }
 
 /* 테스트 화면 수준 선택 */
@@ -2471,6 +2505,9 @@ function show(id){
   }
 })();
 </script>
+<!-- 수업 슬라이드 — 원고 + 공용 화면 -->
+<script src="lesson.js"></script>
+<script src="board.js"></script>
 <!-- 공용 기록 초기화 (교실 공용 PC용) -->
 <script src="https://hongyul67-cpu.github.io/links/reset.js"></script>
 <script src="https://hongyul67-cpu.github.io/links/backbar.js"></script>

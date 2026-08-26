@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════
    기초학력 전자칠판 수업자료 — 슬라이드 원고
-   board.html 에서 window.LESSON / window.UNITS 로 읽는다.
+   index.html 안의 수업 슬라이드 화면에서 board.js 가 window.LESSON / window.UNITS 로 읽는다.
 
    진단도구(index.html)가 실제로 묻는 것들 중,
    학생이 가장 많이 틀리고 한 번 잡아 두면 오래 가는 것만 골랐다.

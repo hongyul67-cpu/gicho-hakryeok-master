@@ -353,7 +353,7 @@
           <div class="subject-box on" data-s="math" id="box-math">수학<span class="cnt" id="cnt-math"></span></div>
         </div>
       </div>
-      <button class="btn-main" id="startBtn">학습 시작하기</button>
+      <button class="btn-main" id="startBtn">테스트 시작하기</button>
     </section>
 
     <!-- 퀴즈 화면 -->
@@ -389,6 +389,17 @@
 
 <script>
 /* ===================== 유틸 ===================== */
+/* 숫자 뒤에 붙는 조사 — 한자음 받침에 맞춰 고른다.
+   1일·3삼·6육·7칠·8팔 과 십/백/천(끝자리 0)은 받침이 있어 '을·은·이·과',
+   2이·4사·5오·9구 는 받침이 없어 '를·는·가·와' 를 쓴다.
+   ('x=1를 대입' 처럼 어색하던 것을 바로잡기 위한 것) */
+function jos(n, withJong, withoutJong){
+  var last = Math.abs(Math.trunc(Number(n))) % 10;
+  var hasJong = (last===0||last===1||last===3||last===6||last===7||last===8);
+  return hasJong ? withJong : withoutJong;
+}
+/* 계수 표기 — 수학에서 1x 라고 쓰지 않는다. 1이면 x, -1이면 -x */
+function coefX(a){ return a===1 ? 'x' : (a===-1 ? '-x' : a+'x'); }
 function gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ [a,b]=[b,a%b]; } return a; }
 function lcm(a,b){ return Math.abs(a*b)/gcd(a,b); }
 function factorial(n){ let r=1; for(let i=2;i<=n;i++) r*=i; return r; }
@@ -1155,7 +1166,7 @@ function buildMathPool(){
   pairsGrid(2,12,2,12).forEach(([n,k])=>{
     const num=n*k, den=(n+1)*k;
     const g=gcd(num,den);
-    pool.push(shortItem(`${num}/${den}을 기약분수로 나타내면?`, [`${num/g}/${den/g}`]));
+    pool.push(shortItem(`${num}/${den}${jos(num,'을','를')} 기약분수로 나타내면?`, [`${num/g}/${den/g}`]));
   });
   for(let a=1;a<=25;a++){
     const x = 2 + (a%20);
@@ -1169,9 +1180,9 @@ function buildMathPool(){
   for(let n=2;n<=15;n++) pool.push(shortItem(`${n}² (${n}의 제곱)의 값은?`, [String(n*n)]));
   for(let n=2;n<=10;n++) pool.push(shortItem(`${n}³ (${n}의 세제곱)의 값은?`, [String(n*n*n)]));
   [[12,18],[8,12],[15,20],[24,36],[9,15],[14,21],[16,24],[18,27],[10,25],[20,30],[21,28],[6,9],[12,16],[25,35],[30,45]]
-    .forEach(([a,b])=>pool.push(shortItem(`${a}와 ${b}의 최대공약수는?`, [String(gcd(a,b))])));
+    .forEach(([a,b])=>pool.push(shortItem(`${a}${jos(a,'과','와')} ${b}의 최대공약수는?`, [String(gcd(a,b))])));
   [[4,6],[3,5],[6,8],[4,10],[5,6],[3,4],[6,9],[8,12],[9,12],[2,7],[5,10],[4,5],[6,10],[3,8],[10,15]]
-    .forEach(([a,b])=>pool.push(shortItem(`${a}와 ${b}의 최소공배수는?`, [String(lcm(a,b))])));
+    .forEach(([a,b])=>pool.push(shortItem(`${a}${jos(a,'과','와')} ${b}의 최소공배수는?`, [String(lcm(a,b))])));
   for(let i=1;i<=25;i++){
     const a = -1*(1+(i%15));
     const b = 2+(i%20);
@@ -1224,12 +1235,12 @@ function buildMathPoolHS1(){
   }
   // 인수분해 x²+(a+b)x+ab
   for(let a=1;a<=9;a++) for(let b=a+1;b<=9;b++){
-    pool.push(shortItem(`x² + ${a+b}x + ${a*b}를 인수분해하시오. (예: (x+1)(x+2))`, [`(x+${a})(x+${b})`]));
+    pool.push(shortItem(`x² + ${a+b}x + ${a*b}${jos(a*b,'을','를')} 인수분해하시오. (예: (x+1)(x+2))`, [`(x+${a})(x+${b})`]));
   }
   // 완전제곱식
   for(let a=1;a<=9;a++){
-    pool.push(shortItem(`x² + ${2*a}x + ${a*a}를 인수분해하시오. (예: (x+1)²)`, [`(x+${a})²`]));
-    pool.push(shortItem(`x² - ${2*a}x + ${a*a}를 인수분해하시오. (예: (x-1)²)`, [`(x-${a})²`]));
+    pool.push(shortItem(`x² + ${2*a}x + ${a*a}${jos(a*a,'을','를')} 인수분해하시오. (예: (x+1)²)`, [`(x+${a})²`]));
+    pool.push(shortItem(`x² - ${2*a}x + ${a*a}${jos(a*a,'을','를')} 인수분해하시오. (예: (x-1)²)`, [`(x-${a})²`]));
   }
   // 이차방정식 두 해의 합/곱
   for(let a=1;a<=9;a++) for(let b=a+1;b<=9;b++){
@@ -1248,7 +1259,7 @@ function buildMathPoolHS1(){
   // 제곱근 간단히
   [[8,2,2],[12,2,3],[18,3,2],[20,2,5],[24,2,6],[27,3,3],[28,2,7],[32,4,2],[45,3,5],[48,4,3],
    [50,5,2],[63,3,7],[72,6,2],[75,5,3],[80,4,5],[98,7,2],[108,6,3],[125,5,5],[147,7,3],[162,9,2]]
-    .forEach(([n,k,m])=>pool.push(shortItem(`√${n}을 근호 안이 가장 작은 자연수가 되도록 간단히 하시오. (예: 2√3)`, [`${k}√${m}`])));
+    .forEach(([n,k,m])=>pool.push(shortItem(`√${n}${jos(n,'을','를')} 근호 안이 가장 작은 자연수가 되도록 간단히 하시오. (예: 2√3)`, [`${k}√${m}`])));
   // 지수법칙 (수치 계산)
   [2,3,5].forEach(base=>{
     for(let m=2;m<=6;m++) for(let n=2;n<=4;n++){
@@ -1283,7 +1294,7 @@ function buildMathPoolHS1(){
   }
   // 나머지정리 (다항식에 값 대입)
   for(let a=1;a<=6;a++) for(let b=1;b<=6;b++) for(let c of [1,2,3]){
-    pool.push(shortItem(`다항식 x² + ${a}x + ${b}에 x=${c}를 대입한 값은?`, [String(c*c+a*c+b)]));
+    pool.push(shortItem(`다항식 x² + ${coefX(a)} + ${b}에 x=${c}${jos(c,'을','를')} 대입한 값은?`, [String(c*c+a*c+b)]));
   }
   pool.push(...MATH_CONCEPTS_HS1);
   return pool;
@@ -1596,12 +1607,12 @@ function buildMath_ms1(){
   for(let a=-9;a<=-1;a++)for(let b=2;b<=9;b++) p.push(shortItem(`(${a}) × ${b} = ?`,[String(a*b)]));
   for(let n=-15;n<=15;n++){ if(n===0) continue; p.push(shortItem(`|${n}| = ? (절댓값)`,[String(Math.abs(n))])); }
   for(let n=2;n<=12;n++){ p.push(shortItem(`${n}² = ?`,[String(n*n)])); p.push(shortItem(`${n}³ = ?`,[String(n*n*n)])); }
-  for(let a=2;a<=6;a++)for(let b=1;b<=6;b++) p.push(shortItem(`${a}x + ${b}x = ? (예: 5x)`,[`${a+b}x`]));
+  for(let a=2;a<=6;a++)for(let b=1;b<=6;b++) p.push(shortItem(`${a}x + ${coefX(b)} = ? (예: 5x)`,[`${a+b}x`]));
   for(let a=2;a<=6;a++)for(let b=1;b<=6;b++) p.push(shortItem(`${a}(x + ${b})를 전개하시오. (예: 2x+6)`,[`${a}x+${a*b}`]));
   for(let a=1;a<=20;a++){ const x=2+(a%15); p.push(shortItem(`x + ${a} = ${a+x} 일 때, x = ?`,[String(x)])); }
   for(let a=2;a<=9;a++)for(let x=2;x<=9;x++) p.push(shortItem(`${a}x = ${a*x} 일 때, x = ?`,[String(x)]));
-  [[12,"2²×3"],[18,"2×3²"],[20,"2²×5"],[24,"2³×3"],[36,"2²×3²"],[45,"3²×5"],[50,"2×5²"],[48,"2⁴×3"],[60,"2²×3×5"],[72,"2³×3²"],[8,"2³"],[27,"3³"],[16,"2⁴"],[63,"3²×7"],[100,"2²×5²"]].forEach(([n,f])=>p.push(shortItem(`${n}을 소인수분해하면? (예: 2²×3)`,[f])));
-  [[12,18],[8,12],[15,20],[24,36],[9,15],[16,24],[10,25],[20,30]].forEach(([a,b])=>{p.push(shortItem(`${a}와 ${b}의 최대공약수는?`,[String(gcd(a,b))]));p.push(shortItem(`${a}와 ${b}의 최소공배수는?`,[String(lcm(a,b))]));});
+  [[12,"2²×3"],[18,"2×3²"],[20,"2²×5"],[24,"2³×3"],[36,"2²×3²"],[45,"3²×5"],[50,"2×5²"],[48,"2⁴×3"],[60,"2²×3×5"],[72,"2³×3²"],[8,"2³"],[27,"3³"],[16,"2⁴"],[63,"3²×7"],[100,"2²×5²"]].forEach(([n,f])=>p.push(shortItem(`${n}${jos(n,'을','를')} 소인수분해하면? (예: 2²×3)`,[f])));
+  [[12,18],[8,12],[15,20],[24,36],[9,15],[16,24],[10,25],[20,30]].forEach(([a,b])=>{p.push(shortItem(`${a}${jos(a,'과','와')} ${b}의 최대공약수는?`,[String(gcd(a,b))]));p.push(shortItem(`${a}${jos(a,'과','와')} ${b}의 최소공배수는?`,[String(lcm(a,b))]));});
   return p;
 }
 function buildMath_ms2(){
@@ -1610,8 +1621,8 @@ function buildMath_ms2(){
   for(let a=2;a<=6;a++)for(let b=2;b<=6;b++) p.push(shortItem(`${a}x × ${b}x = ? (예: 6x²)`,[`${a*b}x²`]));
   for(let a=2;a<=5;a++)for(let b=2;b<=5;b++) p.push(shortItem(`${a}x² × ${b}x = ? (예: 6x³)`,[`${a*b}x³`]));
   for(let a=2;a<=6;a++)for(let b=1;b<=8;b++){ const x0=2+(b%7); const c=a*x0; p.push(shuffleChoices(`부등식 ${a}x > ${c}의 해는?`,[`x>${x0}`,`x<${x0}`,`x≥${x0}`,`x>${x0+1}`],`x>${x0}`)); }
-  for(let a=1;a<=6;a++)for(let b=-4;b<=5;b++){ const t=`y = ${a}x ${b>=0?'+ '+b:'- '+(-b)}`; p.push(shortItem(`일차함수 ${t} 에서 기울기는?`,[String(a)])); p.push(shortItem(`일차함수 ${t} 에서 y절편은?`,[String(b)])); }
-  [["0.3","1/3"],["0.6","2/3"],["0.1","1/9"],["0.2","2/9"],["0.4","4/9"],["0.5","5/9"],["0.7","7/9"],["0.8","8/9"]].forEach(([d,f])=>p.push(shortItem(`순환소수 0.${d.slice(2)}̇ (${d.slice(2)}이 반복)을 분수로 나타내면?`,[f])));
+  for(let a=1;a<=6;a++)for(let b=-4;b<=5;b++){ const t=`y = ${coefX(a)} ${b>=0?'+ '+b:'- '+(-b)}`; p.push(shortItem(`일차함수 ${t} 에서 기울기는?`,[String(a)])); p.push(shortItem(`일차함수 ${t} 에서 y절편은?`,[String(b)])); }
+  [["0.3","1/3"],["0.6","2/3"],["0.1","1/9"],["0.2","2/9"],["0.4","4/9"],["0.5","5/9"],["0.7","7/9"],["0.8","8/9"]].forEach(([d,f])=>p.push(shortItem(`순환소수 0.${d.slice(2)}̇ (${d.slice(2)}${jos(d.slice(2),'이','가')} 반복)을 분수로 나타내면?`,[f])));
   for(let x=1;x<=6;x++)for(let y=1;y<=6;y++){ const s=x+y, dd=x-y; if(dd<0) continue; p.push(shortItem(`x+y=${s}, x-y=${dd} 일 때 x = ?`,[String(x)])); }
   p.push(...mathProbItems(), ...MATH_MS2_CONCEPTS);   // EBS: 확률·닮음·도형
   return p;
@@ -1619,9 +1630,9 @@ function buildMath_ms2(){
 function buildMath_ms3(){
   const p=[];
   for(let n=1;n<=20;n++) p.push(shortItem(`√${n*n} = ? (제곱근)`,[String(n)]));
-  [[8,2,2],[12,2,3],[18,3,2],[20,2,5],[24,2,6],[27,3,3],[28,2,7],[32,4,2],[45,3,5],[48,4,3],[50,5,2],[72,6,2],[75,5,3],[80,4,5],[98,7,2]].forEach(([n,k,m])=>p.push(shortItem(`√${n}을 간단히 하시오. (예: 2√3)`,[`${k}√${m}`])));
+  [[8,2,2],[12,2,3],[18,3,2],[20,2,5],[24,2,6],[27,3,3],[28,2,7],[32,4,2],[45,3,5],[48,4,3],[50,5,2],[72,6,2],[75,5,3],[80,4,5],[98,7,2]].forEach(([n,k,m])=>p.push(shortItem(`√${n}${jos(n,'을','를')} 간단히 하시오. (예: 2√3)`,[`${k}√${m}`])));
   [["√2","무리수"],["√3","무리수"],["√4","유리수"],["√5","무리수"],["√9","유리수"],["√16","유리수"],["√7","무리수"],["√25","유리수"],["√10","무리수"],["√36","유리수"]].forEach(([v,t])=>p.push(shuffleChoices(`${v} 은(는) 유리수인가 무리수인가?`,["유리수","무리수"],t)));
-  for(let a=1;a<=9;a++)for(let b=a+1;b<=9;b++) p.push(shortItem(`x² + ${a+b}x + ${a*b}를 인수분해하시오. (예: (x+1)(x+2))`,[`(x+${a})(x+${b})`]));
+  for(let a=1;a<=9;a++)for(let b=a+1;b<=9;b++) p.push(shortItem(`x² + ${a+b}x + ${a*b}${jos(a*b,'을','를')} 인수분해하시오. (예: (x+1)(x+2))`,[`(x+${a})(x+${b})`]));
   for(let a=1;a<=9;a++)for(let b=a+1;b<=9;b++){ p.push(shortItem(`x² - ${a+b}x + ${a*b} = 0의 두 근의 합은?`,[String(a+b)])); p.push(shortItem(`x² - ${a+b}x + ${a*b} = 0의 두 근의 곱은?`,[String(a*b)])); }
   for(let pp=-4;pp<=4;pp++){ if(pp===0) continue; for(let q=-3;q<=4;q++) p.push(shortItem(`이차함수 y = (x ${pp>=0?'- '+pp:'+ '+(-pp)})² ${q>=0?'+ '+q:'- '+(-q)}의 꼭짓점 좌표는? (예: (1,2))`,[`(${pp},${q})`])); }
   [["sin 30°","1/2"],["cos 60°","1/2"],["sin 90°","1"],["cos 0°","1"],["tan 45°","1"],["sin 0°","0"],["cos 90°","0"],["sin 60°","√3/2"],["cos 30°","√3/2"],["sin 45°","√2/2"],["cos 45°","√2/2"]].forEach(([q,a])=>p.push(shortItem(`${q}의 값은? (예: 1/2)`,[a])));
@@ -1643,7 +1654,7 @@ function buildMath_hs2(){
 }
 function buildMath_hs3(){
   const p=[];
-  for(let a=1;a<=5;a++)for(let b=1;b<=6;b++)for(const c of [1,2,3]) p.push(shortItem(`lim(x→${c}) (x² + ${a}x + ${b})의 값은?`,[String(c*c+a*c+b)]));
+  for(let a=1;a<=5;a++)for(let b=1;b<=6;b++)for(const c of [1,2,3]) p.push(shortItem(`lim(x→${c}) (x² + ${coefX(a)} + ${b})의 값은?`,[String(c*c+a*c+b)]));
   for(let a=1;a<=8;a++){ p.push(shortItem(`f(x)=x²일 때 x=${a}에서의 미분계수 f'(${a})는?`,[String(2*a)])); p.push(shortItem(`f(x)=x³일 때 미분계수 f'(${a})는?`,[String(3*a*a)])); }
   [2,4,6,8,10].forEach(a=>p.push(shortItem(`∫(0→${a}) x dx 의 값은?`,[String(a*a/2)])));
   [3,6,9].forEach(a=>p.push(shortItem(`∫(0→${a}) x² dx 의 값은?`,[String(a*a*a/3)])));

@@ -109,6 +109,12 @@ const BASE = 'https://hongyul67-cpu.github.io/gicho-hakryeok-master/';
 const LEVELS = [['ms1','중1'],['ms2','중2'],['ms3','중3'],['hs1','고1'],['hs2','고2'],['hs3','고3']];
 const DEFAULT_LVL = {kor:'ms3', eng:'ms3', math:'ms3'};
 
+// 링크모음 마스터에서 ?rc= 를 달고 들어오면 결과 수집 주소를 미리 채워 둔다
+(function(){
+  const rc = new URLSearchParams(location.search).get('rc');
+  if(rc) document.getElementById('rc').value = rc;
+})();
+
 // 학년 드롭다운 채우기
 document.querySelectorAll('.subj-row').forEach(row=>{
   const s = row.dataset.s;

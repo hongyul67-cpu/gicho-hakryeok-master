@@ -1,6 +1,7 @@
 /* ══════════════════════════════════════════════════════════════
-   기초학력 전자칠판 수업자료 — 슬라이드 원고
-   index.html 안의 수업 슬라이드 화면에서 board.js 가 window.LESSON / window.UNITS 로 읽는다.
+   기초학력 수업 슬라이드 — 원고
+   index.html 의 openBoard() 가 window.LESSON / window.UNITS 를 읽어
+   links 의 공용 뷰어(board-pro.js)에 넘긴다. 화면은 여기서 만들지 않는다.
 
    진단도구(index.html)가 실제로 묻는 것들 중,
    학생이 가장 많이 틀리고 한 번 잡아 두면 오래 가는 것만 골랐다.

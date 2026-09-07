@@ -264,7 +264,7 @@
 <div id="modeNav">
   <button id="navStudy">📖 학습하기</button>
   <button id="navTest" class="active">📝 테스트하기</button>
-  <button id="navBoard">🖥️ 수업 슬라이드</button>
+  <button id="navBoard">📽️ 수업 슬라이드</button>
 </div>
 <div class="wrap">
   <header class="top">
@@ -302,10 +302,14 @@
   <section id="screenBoard" class="hidden">
     <div class="card">
       <p style="margin:0 0 14px;color:var(--sub);font-size:14px">
-        전자칠판·프로젝터로 앞에서 끌고 가는 화면입니다.
-        <b>요점 → 발문 → 퀴즈 → 정답</b>을 하나씩 열며 진행하세요. (← → 키 또는 화면 아래 버튼)
+        교실 앞 큰 화면으로 끌고 가는 슬라이드입니다.
+        <b>요점 → 발문 → 퀴즈 → 정답</b>을 하나씩 열며 진행하세요. (← → 키 또는 화면 아래 버튼)<br>
+        국어 · 영어 · 수학에서 <b>한 번 잡아 두면 오래 가는 것</b>만 골라 담았습니다.
       </p>
-      <div id="boardHome"></div>
+      <button type="button" class="study-cta" id="openBoardBtn"
+              style="background:linear-gradient(135deg,#4c6ef5,#3b5bdb);margin-top:0">
+        📽️ 수업 슬라이드 열기
+      </button>
       <p style="margin:18px 0 0;font-size:12.5px;color:var(--sub)">
         📋 <a href="과제만들기.html" style="color:#4c6ef5;font-weight:700">과제 링크 만들기 (교사용)</a>
         — 반·문항 수를 골라 학생에게 보낼 링크를 만듭니다.
@@ -1868,21 +1872,32 @@ function setMode(mode){
   document.getElementById('navStudy').classList.toggle('active', mode==='study');
   document.getElementById('navTest').classList.toggle('active', mode==='test');
   document.getElementById('navBoard').classList.toggle('active', mode==='board');
-  if(mode==='board') openBoardHome();
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
-/* 수업 슬라이드 — 예전 board.html 이 이 안으로 들어왔다.
-   원고는 lesson.js, 화면은 board.js(모든 도구 공용)가 담당한다.
-   단원 목록은 한 번만 그리면 되므로 boardReady 로 막는다. */
-let boardReady = false;
-function openBoardHome(){
-  if(boardReady) return;
-  const el = document.getElementById('boardHome');
-  if(!window.Board){ el.innerHTML = '<p style="color:var(--sub)">수업자료를 불러오지 못했습니다.</p>'; return; }
-  Board.home(el, {hint:'국어 · 영어 · 수학에서 <b>한 번 잡아 두면 오래 가는 것</b>만 골라 담았습니다.<br>슬라이드 끝의 버튼을 누르면 진단 도구로 넘어갑니다(<code>?rc=…</code> 유지).'});
-  boardReady = true;
+/* 수업 슬라이드 — 원고는 lesson.js, 화면은 links 의 공용 board-pro.js 다.
+   저장소마다 사본을 두지 않는다(예전에는 board.js 사본이 저장소마다 갈라졌다).
+   학습하기 카드는 학생이 혼자 폰으로 읽는 것이고, 이쪽은 교실 앞에 띄우는 별개의 한 벌이다. */
+function openBoard(){
+  const ALL = window.LESSON || [], U = window.UNITS || [];
+  if(!window.BoardPro || !ALL.length){ alert('수업자료를 불러오지 못했습니다. 잠시 뒤 새로고침해 주세요.'); return; }
+  const menu = U.map(u => ({ icon:'📗', title:u.name,
+    desc:'슬라이드 ' + u.idx.length + '장 · ' + ALL[u.idx[0]].t,
+    run:{ kind:'lesson', deck:u.idx.map(i => ALL[i]) } }));
+  menu.push({ icon:'📚', wide:true, title:'전체 이어서 (' + ALL.length + '장)',
+    desc:'국어 → 영어 → 수학 → 시험 요령 순서로 진행합니다.',
+    run:{ kind:'lesson', deck:ALL } });
+  menu.push({ icon:'⬜', wide:true, title:'빈 칠판',
+    desc:'슬라이드 없이 판서만. 문장이나 식을 직접 써 가며 설명할 때.',
+    run:{ kind:'blank' } });
+  BoardPro.open({
+    title:'📽️ 기초학력 · 수업 슬라이드',
+    sub:'요점 → <b>발문</b> → 퀴즈 → 정답을 하나씩 엽니다. 화면 어디든 바로 판서됩니다.<br>' +
+        '요점 속 <b>파란 빈칸</b>은 눌러야 답이 보입니다.',
+    menu: menu
+  });
 }
+document.getElementById('openBoardBtn').addEventListener('click', openBoard);
 
 /* 테스트 화면 수준 선택 */
 document.querySelectorAll('#testLevelBoxes .level-box').forEach(box=>{
@@ -2518,9 +2533,10 @@ function show(id){
   }
 })();
 </script>
-<!-- 수업 슬라이드 — 원고 + 공용 화면 -->
+<!-- 수업 슬라이드 — 원고(lesson.js) 는 이 저장소 것, 화면(board-pro.js) 은 links 의 공용 파일이다.
+     저장소에 사본을 두지 않는다. 화면을 고쳐야 하면 links 저장소에서 고친다. -->
 <script src="lesson.js"></script>
-<script src="board.js"></script>
+<script src="https://hongyul67-cpu.github.io/links/board-pro.js"></script>
 <!-- 공용 기록 초기화 (교실 공용 PC용) -->
 <script src="https://hongyul67-cpu.github.io/links/reset.js"></script>
 <script src="https://hongyul67-cpu.github.io/links/backbar.js"></script>

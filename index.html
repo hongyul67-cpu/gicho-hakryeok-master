@@ -15,6 +15,8 @@
         data-grade="1"
         data-dept="1"></script>
 <script src="https://hongyul67-cpu.github.io/links/rank.js" data-tool="기초학력 진단" data-pace="self"></script>
+<script src="https://hongyul67-cpu.github.io/links/fig.js"></script>
+<script src="figs.js"></script>
 <script>
 /* ── 기초학력 마스터 — 랭킹전 + 생기부 키워드 ──
    · 랭킹: 같은 data-tool 을 쓰는 도구끼리 RP(랭크 포인트)가 하나로 쌓인다.
@@ -234,6 +236,11 @@
   .formula-card h4{margin:0 0 8px; font-size:15px; color:var(--math);}
   .formula-card p{margin:4px 0; font-size:14px;}
   .formula-card .ex{font-size:13px; color:var(--sub); margin-top:6px;}
+  .formula-card figure.fig{margin:12px 0 0; max-width:480px}
+  .figbox{margin:0 0 14px; border:1.5px solid var(--border); border-radius:12px; background:#fff; padding:10px 12px}
+  .figbox>summary{cursor:pointer; font-weight:700; font-size:14.5px; padding:2px 0}
+  .figbox>summary small{font-weight:400; color:var(--sub); margin-left:6px}
+  .figbox[open]>summary{margin-bottom:10px}
 
   .study-cta{
     display:block; width:100%; padding:16px; font-size:16px; margin-top:24px; color:#fff;
@@ -2094,6 +2101,12 @@ function renderStudyChips(){
   });
 }
 
+/* 배우기 그림 (figs.js) — 공식노트 카드 제목(cards) · 국어·영어 칩 key(chips) 로 찾는다 */
+function studyFigKeys(field, v){
+  if(!window.FIG || !window.FIGS) return [];
+  return Object.keys(FIGS).filter(k=> (FIGS[k][field]||[]).indexOf(v) >= 0);
+}
+
 function renderStudyBody(){
   const body = document.getElementById('studyBody');
   body.innerHTML = '';
@@ -2103,7 +2116,8 @@ function renderStudyBody(){
     list.forEach(f=>{
       const card = document.createElement('div');
       card.className = 'formula-card';
-      card.innerHTML = `<h4>${escapeHtml(f.title)}</h4><p>${escapeHtml(f.body)}</p><div class="ex">${escapeHtml(f.ex)}</div>`;
+      card.innerHTML = `<h4>${escapeHtml(f.title)}</h4><p>${escapeHtml(f.body)}</p><div class="ex">${escapeHtml(f.ex)}</div>` +
+        studyFigKeys('cards', f.title).map(k=>FIG.figure(k)).join('');
       body.appendChild(card);
     });
     return;
@@ -2111,6 +2125,13 @@ function renderStudyBody(){
 
   const cat = STUDY_CATEGORIES[studySubject].find(c=>c.key===studyCategory);
   if(!cat) return;
+  const figKeys = studyFigKeys('chips', cat.key);
+  if(figKeys.length){
+    const fb = document.createElement('div');
+    fb.innerHTML = `<details class="figbox" open><summary>🖼️ 그림으로 먼저 보기 <small>${figKeys.length}장 · 그림을 누르면 크게</small></summary>` +
+      FIG.gallery(figKeys) + `</details>`;
+    body.appendChild(fb.firstChild);
+  }
   const grid = document.createElement('div');
   grid.className = 'flash-grid';
   cat.data.forEach(([front,back])=>{

@@ -5,6 +5,7 @@
 
    진단도구(index.html)가 실제로 묻는 것들 중,
    학생이 가장 많이 틀리고 한 번 잡아 두면 오래 가는 것만 골랐다.
+   그림: svg: FIG.svgOf('키') 인 장은 figs.js 의 그림을 배우기 화면과 함께 쓴다(2026-10-01 보조08).
    ══════════════════════════════════════════════════════════════ */
 
 var HOME = 'https://hongyul67-cpu.github.io/gicho-hakryeok-master/';
@@ -15,6 +16,8 @@ var C = { ink:'#111827', dim:'#6b7280', red:'#dc2626', blue:'#2563eb',
 function svg(w, h, body){
   return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" style="max-height:38vh" '
        + 'xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">'
+       /* 흰 종이 바탕 — 공용 뷰어의 그림 칸이 어두워서 바탕이 없으면 검은 글자가 사라진다 */
+       + '<rect x="1" y="1" width="' + (w - 2) + '" height="' + (h - 2) + '" rx="12" fill="#fff" stroke="#e5e7eb" stroke-width="2"/>'
        + '<defs><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">'
        + '<path d="M0,0 L8,3 L0,6 z" fill="' + C.ink + '"/></marker></defs>' + body + '</svg>';
 }
@@ -38,16 +41,7 @@ function ox(x, y, ok){
 var LESSON = [
 {
   u:'📖 국어', t:'문장의 뼈대 — 누가 / 무엇을 / 어찌한다',
-  svg: svg(520, 225,
-    box(30, 45, 130, 52, '#eff6ff', C.blue) + tx(95, 77, '주어', {a:'middle', b:1, size:20, c:C.blue}) +
-    box(185, 45, 130, 52, '#fff7ed', C.gold) + tx(250, 77, '목적어', {a:'middle', b:1, size:20, c:C.gold}) +
-    box(340, 45, 150, 52, '#f0fdf4', C.green) + tx(415, 77, '서술어', {a:'middle', b:1, size:20, c:C.green}) +
-    tx(95, 118, '누가 / 무엇이', {a:'middle', size:13, c:C.dim}) +
-    tx(250, 118, '무엇을', {a:'middle', size:13, c:C.dim}) +
-    tx(415, 118, '어찌한다 / 어떠하다', {a:'middle', size:13, c:C.dim}) +
-    tx(260, 160, '동생이      밥을      먹는다.', {a:'middle', size:24, b:1}) +
-    tx(260, 196, '주어를 빼먹거나 서술어와 짝이 안 맞으면 문장이 어색해진다', {a:'middle', size:13, c:C.dim}) +
-    tx(260, 218, '“내 꿈은 요리사가 되고 싶다” → “내 꿈은 요리사가 되는 것이다”', {a:'middle', size:13, c:C.red})),
+  svg: FIG.svgOf('skeleton'),   /* figs.js 의 그림 — 배우기와 같은 그림 */
   cap:'모든 문장은 이 뼈대 위에 살이 붙는다',
   pts:[
     '문장의 기본 뼈대는 <b>주어(누가) + 목적어(무엇을) + 서술어(어찌한다)</b>다.',
@@ -301,19 +295,7 @@ var LESSON = [
 
 {
   u:'🔤 영어', t:'시제 — 언제 일어난 일인가',
-  svg: svg(520, 235,
-    '<line x1="40" y1="105" x2="480" y2="105" stroke="' + C.ink + '" stroke-width="2" marker-end="url(#ar)"/>' +
-    '<circle cx="130" cy="105" r="7" fill="' + C.gold + '"/>' +
-    '<circle cx="260" cy="105" r="7" fill="' + C.blue + '"/>' +
-    '<circle cx="395" cy="105" r="7" fill="' + C.green + '"/>' +
-    tx(130, 78, '과거', {a:'middle', b:1, size:17, c:C.gold}) +
-    tx(260, 78, '현재', {a:'middle', b:1, size:17, c:C.blue}) +
-    tx(395, 78, '미래', {a:'middle', b:1, size:17, c:C.green}) +
-    tx(130, 138, 'I went', {a:'middle', size:16}) + tx(130, 160, 'yesterday', {a:'middle', size:12, c:C.dim}) +
-    tx(260, 138, 'I go', {a:'middle', size:16}) + tx(260, 160, 'every day', {a:'middle', size:12, c:C.dim}) +
-    tx(395, 138, 'I will go', {a:'middle', size:16}) + tx(395, 160, 'tomorrow', {a:'middle', size:12, c:C.dim}) +
-    tx(260, 198, '불규칙 과거형은 통째로 외운다', {a:'middle', size:14.5, b:1, c:C.red}) +
-    tx(260, 224, 'go–went · eat–ate · see–saw · buy–bought · take–took · come–came', {a:'middle', size:13, c:C.dim})),
+  svg: FIG.svgOf('tense', {labels:false}),   /* figs.js 의 그림 — 배우기와 같은 그림 */
   cap:'시제는 “언제”를 나타내는 말과 짝이 맞아야 한다',
   pts:[
     '<b>과거</b>는 보통 <b>-ed</b>를 붙이지만, 자주 쓰는 동사일수록 <b>불규칙</b>이다 — go–<b>went</b>, eat–<b>ate</b>, see–<b>saw</b>, buy–<b>bought</b>.',

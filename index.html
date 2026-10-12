@@ -999,25 +999,26 @@ const ENG2_VOCAB = [
   ["규칙","rule"],["법","law"],["정의","justice"],["평등","equality"],["다양성","diversity"],
   ["존중","respect"],["이해","understanding"],["소통","communication"],["관계","relationship"],["태도","attitude"]
 ];
+/* 보기를 문항마다 따로 둔다 — who·which 자리에는 that 도 맞으므로 둘을 한 보기에 같이 넣지 않는다 */
 const ENG2_RELATIVE = [
-  ['"The man ___ is standing there is my uncle."', "who"],
-  ['"The book ___ is on the table is mine."', "which"],
-  ['"This is the house ___ roof is red."', "whose"],
-  ['"I like the movie ___ we watched yesterday."', "that"],
-  ['"She is the girl ___ won the contest."', "who"],
-  ['"The car ___ I bought is fast."', "that"],
-  ['"Do you know the boy ___ sister is a singer?"', "whose"],
-  ['"This is the pen ___ he lost."', "that"]
+  ['"The man ___ is standing there is my uncle."', ["who","which","whose","what"], "who"],
+  ['"The book ___ is on the table is mine."', ["which","who","whose","what"], "which"],
+  ['"This is the house ___ roof is red."', ["whose","who","which","that"], "whose"],
+  ['"I like the movie ___ we watched yesterday."', ["that","who","whose","what"], "that"],
+  ['"She is the girl ___ won the contest."', ["who","which","whose","what"], "who"],
+  ['"The car ___ I bought is fast."', ["that","who","whose","what"], "that"],
+  ['"Do you know the boy ___ sister is a singer?"', ["whose","who","which","that"], "whose"],
+  ['"This is the pen ___ he lost."', ["that","who","whose","what"], "that"]
 ];
 const ENG2_GERUND_INF = [
-  ['"I enjoy ___ (read) books."', "reading"],
-  ['"She wants ___ (go) home."', "to go"],
-  ['"He finished ___ (do) his homework."', "doing"],
-  ['"They decided ___ (leave) early."', "to leave"],
-  ['"We should avoid ___ (make) mistakes."', "making"],
-  ['"I hope ___ (see) you soon."', "to see"],
-  ['"She gave up ___ (smoke)."', "smoking"],
-  ['"He plans ___ (study) abroad."', "to study"]
+  ['"I enjoy ___ (read) books."', ["reading","to read","read","reads"], "reading"],
+  ['"She wants ___ (go) home."', ["to go","going","go","goes"], "to go"],
+  ['"He finished ___ (do) his homework."', ["doing","to do","do","did"], "doing"],
+  ['"They decided ___ (leave) early."', ["to leave","leaving","leave","left"], "to leave"],
+  ['"We should avoid ___ (make) mistakes."', ["making","to make","make","made"], "making"],
+  ['"I hope ___ (see) you soon."', ["to see","seeing","see","saw"], "to see"],
+  ['"She gave up ___ (smoke)."', ["smoking","to smoke","smoke","smoked"], "smoking"],
+  ['"He plans ___ (study) abroad."', ["to study","studying","study","studied"], "to study"]
 ];
 const ENG2_PASSIVE = [
   ["Tom wrote this book.","This book was written by Tom."],
@@ -1054,14 +1055,14 @@ const ENG2_COMPARATIVE = [
   ['"This is the ___ (expensive) car in the shop."', ["most expensive","expensivest","more expensive","expensive"], "most expensive"]
 ];
 const ENG2_CONJUNCTION = [
-  ['"___ it was raining, we went out."', ["Although","Because","So","And"], "Although"],
-  ['"I stayed home ___ I was sick."', ["because","although","so","but"], "because"],
-  ['"He studied hard, ___ he passed the exam."', ["so","although","because","or"], "so"],
-  ['"___ she is young, she is very wise."', ["Although","Because","So","And"], "Although"],
-  ['"I like tea ___ my sister likes coffee."', ["while","because","so","although"], "while"],
-  ['"I have not seen him ___ last year."', ["since","for","during","while"], "since"],
-  ['"You can stay ___ you are quiet."', ["as long as","because","so that","although"], "as long as"],
-  ['"She left early ___ she could catch the train."', ["so that","although","because of","despite"], "so that"]
+  ['"___ it was raining, we went out." (비가 오고 있었지만 우리는 나갔다.)', ["Although","Because","So","And"], "Although"],
+  ['"I stayed home ___ I was sick." (나는 아파서 집에 있었다.)', ["because","although","so","but"], "because"],
+  ['"He studied hard, ___ he passed the exam." (그는 열심히 공부해서 시험에 합격했다.)', ["so","although","because","or"], "so"],
+  ['"___ she is young, she is very wise." (그녀는 어리지만 매우 지혜롭다.)', ["Although","Because","So","And"], "Although"],
+  ['"I like tea ___ my sister likes coffee." (나는 차를 좋아하는 반면, 언니는 커피를 좋아한다.)', ["while","because","so","unless"], "while"],
+  ['"I have not seen him ___ last year." (작년 이후로 그를 보지 못했다.)', ["since","for","during","while"], "since"],
+  ['"You can stay ___ you are quiet." (조용히 있기만 하면 여기 있어도 된다.)', ["as long as","as well as","so that","although"], "as long as"],
+  ['"She left early ___ she could catch the train." (그녀는 기차를 탈 수 있도록 일찍 떠났다.)', ["so that","although","because of","despite"], "so that"]
 ];
 const ENG2_IDIOMS = [
   ["give up","포기하다"],["look for","찾다"],["take care of","돌보다"],["run out of","다 떨어지다"],
@@ -1079,13 +1080,11 @@ function buildEngPoolHS1(){
   ENG2_VOCAB.forEach(([kr,en])=>{
     pool.push(shortItem(`"${kr}"를 뜻하는 영어 단어를 쓰시오.`, [en]));
   });
-  ENG2_RELATIVE.forEach(([sentence,correct])=>{
-    pool.push(shuffleChoices(sentence, ["who","which","whose","that"], correct));
+  ENG2_RELATIVE.forEach(([sentence,choices,correct])=>{
+    pool.push(shuffleChoices(sentence, choices, correct));
   });
-  ENG2_GERUND_INF.forEach(([sentence,correct])=>{
-    const distractorsPool = ["reading","to go","doing","to leave","making","to see","smoking","to study"].filter(x=>x!==correct);
-    const choices = shuffle([correct, ...pick(distractorsPool,3)]);
-    pool.push(mcItem(sentence, choices, choices.indexOf(correct)));
+  ENG2_GERUND_INF.forEach(([sentence,choices,correct])=>{
+    pool.push(shuffleChoices(sentence, choices, correct));
   });
   ENG2_PASSIVE.forEach(([active,passive])=>{
     pool.push(shortItem(`다음 문장을 수동태로 바꾸어 쓰시오: "${active}"`, [passive]));
@@ -1538,27 +1537,28 @@ function engPastItems(arr){const p=[];arr.forEach(([b,pa])=>p.push(shortItem(`Wr
 function engPronounItems(arr){const p=[];arr.forEach(([s,poss])=>p.push(shortItem(`인칭대명사 "${s}"의 소유격을 쓰시오. (예: I→my)`,[poss])));return p;}
 function engCompItems(arr){const p=[];arr.forEach(([b,c])=>p.push(shortItem(`형용사 "${b}"의 비교급을 쓰시오. (예: tall→taller)`,[c])));return p;}
 function engPPItems(arr){const p=[];arr.forEach(([b,pp])=>p.push(shortItem(`현재완료문 "I have ___ ." — 동사 "${b}"의 과거분사를 쓰시오.`,[pp])));return p;}
-function engModalItems(arr){return meaningQ(arr, t=>`조동사 "${t}"의 뜻으로 알맞은 것은?`);}
+const ENG_MODAL_ALSO = {can:["~해도 된다"], may:["~일지도 모른다"], must:["~하는 게 좋다"], should:["~해야 한다"]};   // 그 조동사에도 맞는 뜻 — 오답 보기에서 뺀다
+function engModalItems(arr){const p=[];arr.forEach(([t,me])=>{const d=pick(arr.map(x=>x[1]).filter(m=>m!==me&&!(ENG_MODAL_ALSO[t]||[]).includes(m)),3);const ch=shuffle([me,...d]);p.push(mcItem(`조동사 "${t}"의 뜻으로 알맞은 것은?`,ch,ch.indexOf(me)));});return p;}
 function engIdiomItems(arr){return meaningQ(arr, t=>`숙어 "${t}"의 뜻으로 알맞은 것은?`);}
 function engChoiceItems(arr){const p=[];arr.forEach(([q,choices,c])=>p.push(shuffleChoices(q,choices,c)));return p;}
-function engRelItems(arr){const p=[];arr.forEach(([q,c])=>p.push(shuffleChoices(q,["who","which","whose","that"],c)));return p;}
-function engGerundItems(arr){const pool=["reading","to go","doing","to leave","making","to see","smoking","to study"];const p=[];arr.forEach(([q,c])=>{const ch=shuffle([c,...pick(pool.filter(x=>x!==c),3)]);p.push(mcItem(q,ch,ch.indexOf(c)));});return p;}
+function engRelItems(arr){return engChoiceItems(arr);}
+function engGerundItems(arr){return engChoiceItems(arr);}
 function engBeVerbItems(){const pr=[["I","am"],["You","are"],["He","is"],["She","is"],["We","are"],["They","are"],["It","is"]];const pf=["a doctor","a teacher","a student","a nurse","an artist"];const p=[];pr.forEach(([x,c])=>pf.forEach(f=>p.push(shuffleChoices(`"${x} ___ ${f}."`,["is","are","am"],c))));return p;}
-function engArticleItems(){return [
-  shuffleChoices('"This is ___ apple."',["an","a","the","-"],"an"),
-  shuffleChoices('"That is ___ car."',["a","an","the","-"],"a"),
-  shuffleChoices('"I have ___ umbrella."',["an","a","the","-"],"an"),
-  shuffleChoices('"She is ___ honest girl."',["an","a","the","-"],"an"),
-  shuffleChoices('"He is ___ nice boy."',["a","an","the","-"],"a"),
-  shuffleChoices('"It is ___ old book."',["an","a","the","-"],"an")
+function engArticleItems(){return [   // the 도 문법상 맞으므로 보기에 넣지 않는다
+  shuffleChoices('"This is ___ apple."',["an","a","-"],"an"),
+  shuffleChoices('"That is ___ car."',["a","an","-"],"a"),
+  shuffleChoices('"I have ___ umbrella."',["an","a","-"],"an"),
+  shuffleChoices('"She is ___ honest girl."',["an","a","-"],"an"),
+  shuffleChoices('"He is ___ nice boy."',["a","an","-"],"a"),
+  shuffleChoices('"It is ___ old book."',["an","a","-"],"an")
 ];}
 function engPrepItems(){return [
-  shuffleChoices('"The cat is ___ the box."',["in","on","at","under"],"in"),
-  shuffleChoices('"The book is ___ the desk."',["on","in","at","of"],"on"),
+  shuffleChoices('"The cat is ___ the box." (고양이가 상자 안에 있다.)',["in","on","at","under"],"in"),
+  shuffleChoices('"The book is ___ the desk." (책이 책상 위에 있다.)',["on","in","at","of"],"on"),
   shuffleChoices('"We meet ___ Monday."',["on","in","at","to"],"on"),
   shuffleChoices('"She was born ___ 2012."',["in","on","at","to"],"in"),
   shuffleChoices('"Class starts ___ 9 o\'clock."',["at","on","in","to"],"at"),
-  shuffleChoices('"The ball rolled ___ the table."',["under","in","on","of"],"under")
+  shuffleChoices('"The ball rolled ___ the table." (공이 탁자 밑으로 굴러갔다.)',["under","in","on","of"],"under")
 ];}
 
 /* --- 영어 신규 데이터 --- */
@@ -1567,24 +1567,24 @@ const ENG_MODALS = [["can","~할 수 있다"],["must","~해야 한다"],["may","
 const ENG_MS2_COMP = [["tall","taller"],["big","bigger"],["fast","faster"],["happy","happier"],["good","better"],["bad","worse"],["hot","hotter"],["nice","nicer"],["large","larger"],["easy","easier"],["heavy","heavier"],["small","smaller"]];
 const ENG_PRESENT_PERFECT = [["go","gone"],["eat","eaten"],["see","seen"],["do","done"],["write","written"],["take","taken"],["give","given"],["know","known"],["break","broken"],["speak","spoken"],["come","come"],["run","run"],["make","made"],["find","found"],["meet","met"]];
 const ENG_HS2_SUBJUNCTIVE = [
-  ['"If I ___ a bird, I would fly."', ["were","am","was","be"], "were"],
+  ['"If I ___ a bird, I would fly."', ["were","am","is","be"], "were"],
   ['"If he ___ harder, he would pass."', ["studied","studies","study","will study"], "studied"],
-  ['"I wish I ___ taller."', ["were","am","was","be"], "were"],
+  ['"I wish I ___ taller."', ["were","am","is","be"], "were"],
   ['"If it ___ rained, we would have stayed."', ["had","has","have","having"], "had"],
-  ['"If I ___ you, I would apologize."', ["were","am","was","be"], "were"],
-  ['"She talks as if she ___ everything."', ["knew","knows","know","known"], "knew"]
+  ['"If I ___ you, I would apologize."', ["were","am","is","be"], "were"],
+  ['"She talks as if she ___ everything."', ["knew","knowing","know","known"], "knew"]
 ];
 const ENG_HS2_PARTICIPLE = [
   ['"___ tired, he went to bed early."', ["Being","Been","To be","Be"], "Being"],
-  ['"___ his homework, he went out to play."', ["Having finished","Finish","Finished to","To finish"], "Having finished"],
+  ['"___ his homework, he went out to play."', ["Having finished","Finish","Finished to","Finishes"], "Having finished"],
   ['"The girl ___ over there is my sister."', ["standing","stood","stand","to stand"], "standing"],
   ['"___ by everyone, she felt happy."', ["Loved","Loving","Love","To love"], "Loved"],
-  ['"He sat on the sofa, ___ a book."', ["reading","read","to read","reads"], "reading"]
+  ['"He sat on the sofa, ___ a book."', ["reading","read","is read","reads"], "reading"]
 ];
 const ENG_HS2_INVERSION = [
-  ['"Never ___ I seen such a thing."', ["have","has","had","having"], "have"],
+  ['"Never ___ I seen such a thing."', ["have","has","did","having"], "have"],
   ['"Not only ___ he smart, but also kind."', ["is","are","be","being"], "is"],
-  ['"Little ___ he know the truth."', ["did","do","does","done"], "did"],
+  ['"Little ___ he know the truth."', ["did","do","is","done"], "did"],
   ['"Hardly ___ she arrived when it began to rain."', ["had","has","have","having"], "had"]
 ];
 const ENG3_VOCAB = [
@@ -1603,11 +1603,11 @@ const ENG3_USAGE = [
   ['"The number of students ___ increasing."', ["is","are","were","have"], "is"],
   ['"Each of the boys ___ a bag."', ["has","have","having","are"], "has"],
   ['"He is one of the students who ___ hard."', ["study","studies","studying","to study"], "study"],
-  ['"It is important that he ___ present."', ["be","is","was","being"], "be"],
-  ['"Neither of them ___ correct."', ["is","are","were","have"], "is"],
+  ['"It is important that he ___ present."', ["be","been","to be","being"], "be"],
+  ['"Neither of them ___ correct."', ["is","be","being","have"], "is"],
   ['"I had my car ___ yesterday."', ["repaired","repair","repairing","to repair"], "repaired"],
   ['"The news ___ surprising."', ["was","were","have","are"], "was"],
-  ['"Not until midnight ___ he arrive."', ["did","do","does","done"], "did"]
+  ['"Not until midnight ___ he arrive."', ["did","do","was","done"], "did"]
 ];
 
 /* --- 수학 학년별 생성기 --- */
@@ -1690,14 +1690,14 @@ const ENG_MS1_TENSE = [   // 단순시제(현재·과거·미래) — 중1
   ['"He ___ his homework an hour ago."', ["did","does","do","doing"], "did"]
 ];
 const ENG_SUPERLATIVE = [   // 최상급 — 중2
-  ['"This is the ___ building in the city."', ["tallest","taller","most tall","tall"], "tallest"],
-  ['"She is the ___ student in class."', ["smartest","smarter","most smart","smart"], "smartest"],
-  ['"Health is the ___ thing of all."', ["most important","importantest","more important","important"], "most important"],
-  ['"It was the ___ day of my life."', ["best","better","goodest","most good"], "best"],
+  ['"This is the ___ building in the city. (가장 높은)"', ["tallest","taller","most tall","tall"], "tallest"],
+  ['"She is the ___ student in class. (가장 똑똑한)"', ["smartest","smarter","most smart","smart"], "smartest"],
+  ['"Health is the ___ thing of all. (가장 중요한)"', ["most important","importantest","more important","important"], "most important"],
+  ['"It was the ___ day of my life. (가장 좋은)"', ["best","better","goodest","most good"], "best"],
   ['"That was the ___ movie ever."', ["worst","worse","baddest","most bad"], "worst"],
   ['"He runs the ___ in his team."', ["fastest","faster","most fast","fast"], "fastest"],
-  ['"Winter is the ___ season here."', ["coldest","colder","most cold","cold"], "coldest"],
-  ['"She is the ___ of all the singers."', ["most popular","popularest","more popular","popular"], "most popular"]
+  ['"Winter is the ___ season here. (가장 추운)"', ["coldest","colder","most cold","cold"], "coldest"],
+  ['"She is the ___ of all the singers. (가장 인기 있는)"', ["most popular","popularest","more popular","popular"], "most popular"]
 ];
 const ENG_PARTICIPLE_MS2 = [   // 분사(현재분사/과거분사) — 중2
   ['"Look at the ___ baby. (자고 있는)"', ["sleeping","slept","sleep","to sleep"], "sleeping"],
@@ -1721,10 +1721,10 @@ const ENG_MS3_SPECIAL = [   // 관계부사·강조·도치 등 심화 — 중3
   ['"This is the house ___ I was born."', ["where","which","who","when"], "where"],
   ['"Tell me the reason ___ you were late."', ["why","where","who","which"], "why"],
   ['"Do you remember the day ___ we met?"', ["when","where","which","who"], "when"],
-  ['"I don\'t know ___ he lives."', ["where","where does","that","what"], "where"],
-  ['"He is ___ tall ___ handsome."', ["both / and","either / or","neither / nor","not / but"], "both / and"],
-  ['"Here ___ the bus!"', ["comes","come","coming","came"], "comes"],
-  ['"Never ___ I seen such a sight."', ["have","has","had","having"], "have"],
+  ['"I don\'t know ___ he lives."', ["where","where does","who","what"], "where"],
+  ['"He is ___ tall ___ handsome." (그는 키도 크고 잘생기기도 했다.)', ["both / and","either / or","neither / nor","not / but"], "both / and"],
+  ['"Here ___ the bus!"', ["comes","come","coming","to come"], "comes"],
+  ['"Never ___ I seen such a sight."', ["have","has","did","having"], "have"],
   ['"It was John ___ broke the window. (강조)"', ["that","what","which","whom"], "that"]
 ];
 

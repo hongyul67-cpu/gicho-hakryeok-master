@@ -424,7 +424,7 @@ function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 function mcItem(q, choices, answerIndex){ return {type:'mc', q, choices, answer:answerIndex}; }
-function shortItem(q, answers){ return {type:'short', q, answers}; }
+function shortItem(q, answers, avoid){ return {type:'short', q, answers, avoid: avoid || []}; }   // avoid: 뜻이 가까워 오답 보기로 내면 안 되는 낱말
 /* 보기 순서를 섞으면서 정답 인덱스를 함께 갱신 */
 function shuffleChoices(q, choices, correctValue){
   const order = shuffle(choices.map((c,i)=>i));
@@ -1077,9 +1077,7 @@ const ENG2_IDIOMS = [
 
 function buildEngPoolHS1(){
   const pool = [];
-  ENG2_VOCAB.forEach(([kr,en])=>{
-    pool.push(shortItem(`"${kr}"를 뜻하는 영어 단어를 쓰시오.`, [en]));
-  });
+  pool.push(...engVocabItems(ENG2_VOCAB));
   ENG2_RELATIVE.forEach(([sentence,choices,correct])=>{
     pool.push(shuffleChoices(sentence, choices, correct));
   });
@@ -1095,12 +1093,7 @@ function buildEngPoolHS1(){
   ENG2_CONJUNCTION.forEach(([sentence,choices,correct])=>{
     pool.push(shuffleChoices(sentence, choices, correct));
   });
-  const allIdiomMeanings = ENG2_IDIOMS.map(x=>x[1]);
-  ENG2_IDIOMS.forEach(([phrase,meaning])=>{
-    const distractors = pick(allIdiomMeanings.filter(m=>m!==meaning), 3);
-    const choices = shuffle([meaning, ...distractors]);
-    pool.push(mcItem(`숙어 "${phrase}"의 뜻으로 알맞은 것은?`, choices, choices.indexOf(meaning)));
-  });
+  pool.push(...engIdiomItems(ENG2_IDIOMS));
   return pool;
 }
 
@@ -1349,7 +1342,7 @@ function convertPoolToMC(pool){
     if(q.type !== 'short') return q;
     const correct = String(q.answers[0]);
     const g = ansSig(correct);
-    const seen = new Set([correct]);
+    const seen = new Set([correct, ...q.answers.map(String), ...(q.avoid || [])]);   // 함께 인정하는 답·뜻이 가까운 낱말은 오답 보기로 내지 않는다
     const distractors = [];
     for(const cand of shuffle(buckets[g] || [])){
       if(!seen.has(cand)){ seen.add(cand); distractors.push(cand); }
@@ -1377,7 +1370,7 @@ function kHonorQ(arr){const p=[];arr.forEach(([w,h])=>p.push(shortItem(`"${w}"�
 function kIdiomQ(arr){const M=arr.map(x=>x[1]);const p=[];arr.forEach(([id,me])=>{const d=pick(M.filter(m=>m!==me),3);const ch=shuffle([me,...d]);p.push(mcItem(`사자성어 "${id}"의 뜻으로 알맞은 것은?`,ch,ch.indexOf(me)));});return p;}
 function kSpellQ(arr){const W=arr.map(x=>x[1]);const p=[];arr.forEach(([c,w])=>{const o=pick(W.filter(x=>x!==w),2);const ch=shuffle([c,w,...o]);p.push(mcItem(`다음 중 맞춤법(표준어)이 올바른 것은?`,ch,ch.indexOf(c)));});return p;}
 function classifyQ(arr, prompt, allTypes){const p=[];arr.forEach(([item,correct])=>{const o=allTypes.filter(t=>t!==correct);const ch=shuffle([correct,...pick(o,Math.min(3,o.length))]);p.push(mcItem(prompt(item),ch,ch.indexOf(correct)));});return p;}
-function meaningQ(arr, prompt){const M=arr.map(x=>x[1]);const p=[];arr.forEach(([t,me])=>{const d=pick(M.filter(m=>m!==me),3);const ch=shuffle([me,...d]);p.push(mcItem(prompt(t),ch,ch.indexOf(me)));});return p;}
+function meaningQ(arr, prompt, also){const M=arr.map(x=>x[1]);const p=[];arr.forEach(([t,me])=>{const no=(also&&also[t])||[];const d=pick(M.filter(m=>m!==me&&!no.includes(m)),3);const ch=shuffle([me,...d]);p.push(mcItem(prompt(t),ch,ch.indexOf(me)));});return p;}
 
 /* --- 국어 신규 데이터(중3·고2·고3) --- */
 const KOR_PHONOLOGY = [
@@ -1530,16 +1523,42 @@ function multiMeaningItems(arr){const p=[];arr.forEach(([w,sent,correct,...other
 function multiMeaningPairs(arr){return arr.map(([w,sent,correct])=>[`"${sent}"\n\n▶ 여기서 '${w}'의 뜻은?`, correct]);}
 
 /* --- 영어 문항 생성기 --- */
-function engVocabItems(arr){const p=[];arr.forEach(([kr,en])=>p.push(shortItem(`"${kr}"를 뜻하는 영어 단어를 쓰시오.`,[en])));return p;}
-function engOppositeItems(arr){const p=[];arr.forEach(([a,b])=>{p.push(shortItem(`Write the opposite of "${a}".`,[b]));p.push(shortItem(`Write the opposite of "${b}".`,[a]));});return p;}
-function engPluralItems(arr){const p=[];arr.forEach(([s,pl])=>p.push(shortItem(`Write the plural form of "${s}".`,[pl])));return p;}
+/* 함께 인정할 답 — 첫 답(자료의 답)이 정답 보기로 나오고, 여기 적힌 낱말은 오답 보기로 나오지 않는다 */
+const ENG_VOCAB_ALSO = {
+  "가을":["autumn"],"전화":["telephone"],"자전거":["bike"],"비행기":["plane"],"신발":["shoe"],"모자":["cap"],"바다":["ocean"],"집":["home"],"강아지":["puppy"],
+  "결과":["outcome","consequence","effect"],"영향":["effect","impact"],"원인":["reason"],"목표":["aim","target","objective"],"문제":["issue","trouble"],
+  "기회":["chance"],"능력":["capability","capacity"],"의무":["obligation"],"자유":["liberty"],"발전":["progress","advancement"],"위험":["risk","hazard"],
+  "질병":["illness","sickness"],"규칙":["regulation"],
+  "추측하다":["guess","suppose"],"감소하다":["reduce","decline"],"증가하다":["grow","rise"],"예측하다":["forecast","expect"],"구별하다":["differentiate"],
+  "의존하다":["rely"],"제안하다":["propose"],"요구하다":["demand","request"],"포함하다":["contain","involve"],"설득하다":["convince"],"평가하다":["assess"],
+  "나타내다":["show","indicate"],"강조하다":["stress"],"유지하다":["keep"],"증명하다":["demonstrate"],
+  "애매한":["vague","unclear"],"필수적인":["necessary","vital"],"명백한":["clear","evident","apparent"],"복잡한":["complicated"],"구체적인":["specific"],
+  "적절한":["proper","suitable"],"중요한":["important"],"상당한":["significant","substantial"],"다양한":["various"],"명확한":["clear"],
+  "정확한":["accurate","exact"],"충분한":["enough","adequate"],"드문":["uncommon"]
+};
+/* 답으로 인정하지는 않지만 뜻이 가까워, 오답 보기로 내면 헷갈리는 낱말 */
+const ENG_VOCAB_AVOID = {
+  "저녁":["night"],"밤":["evening"],"발전":["growth"],"성장":["development"],"의무":["responsibility"],"책임":["duty"],"규칙":["law"],"법":["rule"],
+  "보호":["safety"],"안전":["protection"],"문제":["challenge"],"도전":["problem"],
+  "중요한":["essential","considerable"],"필수적인":["significant"],"명백한":["explicit"],"명확한":["obvious","precise"],"정확한":["explicit"],
+  "적절한":["relevant"],"관련된":["appropriate"],"추측하다":["predict","suggest"],"예측하다":["assume"]
+};
+const ENG_OPP_ALSO = {
+  light:["dark"],dark:["light"],hard:["soft"],easy:["difficult"],short:["long"],old:["young"],right:["left"],wrong:["correct"],big:["little"],small:["large"],
+  closed:["opened"],quiet:["noisy"],sad:["glad"],happy:["unhappy"],cold:["warm"],sweet:["bitter"],thin:["fat"],different:["similar"],far:["close"]
+};
+const ENG_PLURAL_ALSO = {fish:["fishes"],person:["persons"]};
+function engVocabItems(arr){const p=[];arr.forEach(([kr,en])=>p.push(shortItem(`"${kr}"를 뜻하는 영어 단어를 쓰시오.`,[en,...(ENG_VOCAB_ALSO[kr]||[])],ENG_VOCAB_AVOID[kr])));return p;}
+function engOppositeItems(arr){const p=[];arr.forEach(([a,b])=>{p.push(shortItem(`Write the opposite of "${a}".`,[b,...(ENG_OPP_ALSO[a]||[])]));p.push(shortItem(`Write the opposite of "${b}".`,[a,...(ENG_OPP_ALSO[b]||[])]));});return p;}
+function engPluralItems(arr){const p=[];arr.forEach(([s,pl])=>p.push(shortItem(`Write the plural form of "${s}".`,[pl,...(ENG_PLURAL_ALSO[s]||[])])));return p;}
 function engPastItems(arr){const p=[];arr.forEach(([b,pa])=>p.push(shortItem(`Write the past tense of "${b}".`,[pa])));return p;}
 function engPronounItems(arr){const p=[];arr.forEach(([s,poss])=>p.push(shortItem(`인칭대명사 "${s}"의 소유격을 쓰시오. (예: I→my)`,[poss])));return p;}
 function engCompItems(arr){const p=[];arr.forEach(([b,c])=>p.push(shortItem(`형용사 "${b}"의 비교급을 쓰시오. (예: tall→taller)`,[c])));return p;}
 function engPPItems(arr){const p=[];arr.forEach(([b,pp])=>p.push(shortItem(`현재완료문 "I have ___ ." — 동사 "${b}"의 과거분사를 쓰시오.`,[pp])));return p;}
 const ENG_MODAL_ALSO = {can:["~해도 된다"], may:["~일지도 모른다"], must:["~하는 게 좋다"], should:["~해야 한다"]};   // 그 조동사에도 맞는 뜻 — 오답 보기에서 뺀다
-function engModalItems(arr){const p=[];arr.forEach(([t,me])=>{const d=pick(arr.map(x=>x[1]).filter(m=>m!==me&&!(ENG_MODAL_ALSO[t]||[]).includes(m)),3);const ch=shuffle([me,...d]);p.push(mcItem(`조동사 "${t}"의 뜻으로 알맞은 것은?`,ch,ch.indexOf(me)));});return p;}
-function engIdiomItems(arr){return meaningQ(arr, t=>`숙어 "${t}"의 뜻으로 알맞은 것은?`);}
+function engModalItems(arr){return meaningQ(arr, t=>`조동사 "${t}"의 뜻으로 알맞은 것은?`, ENG_MODAL_ALSO);}
+const ENG_IDIOM_ALSO = {"keep up with":["따라잡다"], "catch up with":["뒤처지지 않고 따라가다"], "figure out":["아이디어를 생각해내다"], "come up with":["알아내다"]};   // 뜻이 가까워 헷갈리는 보기 — 오답 보기에서 뺀다
+function engIdiomItems(arr){return meaningQ(arr, t=>`숙어 "${t}"의 뜻으로 알맞은 것은?`, ENG_IDIOM_ALSO);}
 function engChoiceItems(arr){const p=[];arr.forEach(([q,choices,c])=>p.push(shuffleChoices(q,choices,c)));return p;}
 function engRelItems(arr){return engChoiceItems(arr);}
 function engGerundItems(arr){return engChoiceItems(arr);}
